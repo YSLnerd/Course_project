@@ -461,8 +461,8 @@ class ОкноПоиска(Screen):
 
         # Кнопка найти
         кнопка_найти = Button(
-            text='Найти', size_hint=(None, None), size=(200, 50),
-            pos_hint={'center_x': 0.5, 'center_y': 0.68},
+            text='Найти', size_hint=(None, None), size=(200, 100),
+            pos_hint={'center_x': 0.5, 'center_y': 0.08},
             background_normal='Кнопка1.png', background_down='Кнопка2.png',
             color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
         )
@@ -831,34 +831,189 @@ class ОкноСтатистики(Screen):
         layout = FloatLayout()
         панель_навигации = создать_панель_навигации(self)
         layout.add_widget(панель_навигации)
+
+        # Кнопка для формирования статистики
         сформировать = Button(
             text='Сформировать', size_hint=(None, None), size=(200, 100),
             pos_hint={'center_x': 0.5, 'center_y': 0.05},
             background_normal='Кнопка1.png', background_down='Кнопка2.png',
             color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
         )
+        сформировать.bind(on_press=self.сформировать_статистику)
         layout.add_widget(сформировать)
-        self.текстовое_поле = TextInput(
-            size_hint_y=None, height=400, multiline=True, readonly=False,
-            font_size=16, font_name="couriercyrps_bold.ttf",
-            background_color=(1, 1, 1, 0.9), foreground_color=(0, 0, 0, 1),
-            padding=(10, 10), hint_text='Введите данные для статистики...'
+
+        # ScrollView для отображения статистики
+        scroll = ScrollView(
+            size_hint=(None, None), size=(800, 400),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            do_scroll_x=False, do_scroll_y=True
         )
+
+        # Контейнер для статистики
+        self.контейнер_статистики = GridLayout(cols=1, size_hint_y=None, spacing=10)
+        self.контейнер_статистики.bind(minimum_height=self.контейнер_статистики.setter('height'))
+        scroll.add_widget(self.контейнер_статистики)
+        layout.add_widget(scroll)
+
         self.add_widget(background)
         self.add_widget(layout)
 
-    def перейти_к_поиску(self, instance):
-        тип_поиска = instance.text
-        self.manager.get_screen('поиск').установить_режим_поиска(тип_поиска)
+    def сформировать_статистику(self, instance=None):
+        try:
+            conn = подключиться_к_бд()
+            if not conn:
+                self.показать_ошибку("Ошибка подключения к базе данных")
+                return
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT 
+                    g.name_ru AS жанр,
+                    COUNT(DISTINCT fm.id_favourite_movies) AS количество_добавлений
+                FROM favourite_movies fm
+                JOIN movies m ON fm.id_movie = m.id_movie
+                JOIN genre_movies gm ON m.id_movie = gm.id_movie
+                JOIN genres g ON gm.id_genre = g.id_genre
+                WHERE g.name_ru IS NOT NULL
+                GROUP BY g.name_ru
+                ORDER BY количество_добавлений DESC
+                LIMIT 10
+            """)
+
+            результаты = cur.fetchall()
+            cur.close()
+            conn.close()
+
+            # Очищаем контейнер перед добавлением новых данных
+            self.контейнер_статистики.clear_widgets()
+
+            if not результаты:
+                # Если нет данных
+                метка = Label(
+                    text='Нет данных для отображения статистики',
+                    size_hint_y=None,
+                    height=50,
+                    font_size=20,
+                    color=(1, 0, 0, 1),
+                    font_name="couriercyrps_bold.ttf"
+                )
+                self.контейнер_статистики.add_widget(метка)
+            else:
+                # Заголовок
+                заголовок = Label(
+                    text='ТОП самых популярных жанров\n',
+                    size_hint_y=None,
+                    height=60,
+                    font_size=24,
+                    bold=True,
+                    color=(0, 0, 0, 1),
+                    font_name="couriercyrps_bold.ttf"
+                )
+                self.контейнер_статистики.add_widget(заголовок)
+
+                # Заголовки столбцов
+                заголовки = BoxLayout(size_hint_y=None, height=40)
+                заголовки.add_widget(Label(
+                    text='№',
+                    size_hint_x=0.2,
+                    font_size=18,
+                    bold=True,
+                    color=(0, 0, 0, 1),
+                    font_name="couriercyrps_bold.ttf"
+                ))
+                заголовки.add_widget(Label(
+                    text='Жанр',
+                    size_hint_x=0.6,
+                    font_size=18,
+                    bold=True,
+                    color=(0, 0, 0, 1),
+                    font_name="couriercyrps_bold.ttf"
+                ))
+                заголовки.add_widget(Label(
+                    text='Добавлений',
+                    size_hint_x=0.2,
+                    font_size=18,
+                    bold=True,
+                    color=(0, 0, 0, 1),
+                    font_name="couriercyrps_bold.ttf"
+                ))
+                self.контейнер_статистики.add_widget(заголовки)
+
+                # Данные статистики
+                for i, (жанр, количество) in enumerate(результаты, 1):
+                    строка = BoxLayout(size_hint_y=None, height=40)
+
+                    # Номер
+                    строка.add_widget(Label(
+                        text=str(i),
+                        size_hint_x=0.2,
+                        font_size=16,
+                        color=(0, 0, 0, 1),
+                        font_name="couriercyrps_bold.ttf"
+                    ))
+
+                    # Название жанра
+                    строка.add_widget(Label(
+                        text=жанр,
+                        size_hint_x=0.6,
+                        font_size=16,
+                        color=(0, 0, 0, 1),
+                        font_name="couriercyrps_bold.ttf"
+                    ))
+
+                    # Количество
+                    строка.add_widget(Label(
+                        text=str(количество),
+                        size_hint_x=0.2,
+                        font_size=16,
+                        color=(0, 0, 0, 1),
+                        font_name="couriercyrps_bold.ttf"
+                    ))
+
+                    self.контейнер_статистики.add_widget(строка)
+
+                # Итоговая информация
+                общее_количество = sum(количество for _, количество in результаты)
+                итог = Label(
+                    text=f'\nВсего добавлений в избранное: {общее_количество}',
+                    size_hint_y=None,
+                    height=50,
+                    font_size=18,
+                    color=(0, 0, 0, 1),
+                    font_name="couriercyrps_bold.ttf"
+                )
+                self.контейнер_статистики.add_widget(итог)
+
+        except Exception as e:
+            print(f"Ошибка при формировании статистики: {e}")
+            self.показать_ошибку(f"Ошибка: {str(e)}")
+
+    def показать_ошибку(self, сообщение):
+        """Показывает сообщение об ошибке"""
+        self.контейнер_статистики.clear_widgets()
+        метка = Label(
+            text=сообщение,
+            size_hint_y=None,
+            height=50,
+            font_size=18,
+            color=(1, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
+        )
+        self.контейнер_статистики.add_widget(метка)
+
+    def перейти_к_поиску(self, instance=None):
+        if instance:
+            тип_поиска = instance.text
+            self.manager.get_screen('поиск').установить_режим_поиска(тип_поиска)
         self.manager.current = 'поиск'
 
-    def вернуться_к_подбору(self, instance):
+    def вернуться_к_подбору(self, instance=None):
         self.manager.current = 'main_menu'
 
-    def показать_статистику(self, instance):
+    def показать_статистику(self, instance=None):
+        # Уже находимся на экране статистики
         pass
 
-    def показать_профиль(self, instance):
+    def показать_профиль(self, instance=None):
         self.manager.current = 'профиль'
 
 
@@ -3851,4 +4006,7 @@ class MyApp(App):
 
 
 if __name__ == '__main__':
-    MyApp().run()
+    try:
+        MyApp().run()
+    except KeyboardInterrupt:
+        print("\nПрограмма завершена пользователем")
