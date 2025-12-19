@@ -153,20 +153,25 @@ class ОкноАвторизации(Screen):
     def обработать_авторизацию(self, instance):
         никнейм = self.поле_ввода_никнейма.text.strip()
         пароль = self.поле_ввода_пароля.text.strip()
+
         if not никнейм or not пароль:
             self.статус_метка.text = 'Введите никнейм и пароль!'
             return
+
         try:
             connection = подключиться_к_бд()
             if connection is None:
                 self.статус_метка.text = 'Ошибка подключения к БД'
                 return
+
             cursor = connection.cursor()
             cursor.execute("SELECT id_user, role FROM users WHERE nickname = %s", (никнейм,))
             пользователь = cursor.fetchone()
+
             if пользователь:
                 cursor.execute("SELECT id_user FROM users WHERE nickname = %s AND password = %s", (никнейм, пароль))
                 проверка_пароля = cursor.fetchone()
+
                 if проверка_пароля:
                     self.сохранить_данные_пользователя(пользователь[0], никнейм, пользователь[1])
                     self.перейти_в_окно_подбора(instance)
@@ -182,6 +187,7 @@ class ОкноАвторизации(Screen):
                 self.сохранить_данные_пользователя(новый_id, никнейм, 'user')
                 self.статус_метка.text = 'Новый пользователь создан!'
                 self.перейти_в_окно_подбора(instance)
+
             cursor.close()
             connection.close()
         except Exception as e:
@@ -292,17 +298,38 @@ class ОкноПодбора(Screen):
         self.add_widget(background)
         self.add_widget(self.layout)
 
+    def on_enter(self):
+        """Очистка всех полей при входе в окно подбора"""
+        self.очистить_поля()
+
+    def очистить_поля(self):
+        """Очищает все поля формы подбора"""
+        self.список_жанров.text = 'Выберите жанр'
+        self.длительность.text = 'Выберите длительность'
+        self.настроение.text = 'Выберите настроение'
+        self.период_выхода.text = 'Выберите период выхода фильма'
+        self.возрастной_рейтинг.text = 'Выберите возрастной рейтинг'
+
+        if self.кнопка_фильма:
+            self.layout.remove_widget(self.кнопка_фильма)
+            self.кнопка_фильма = None
+
     def загрузить_жанры_из_бд(self):
         try:
             conn = подключиться_к_бд()
             if not conn:
                 return ['Драма', 'Комедия', 'Ужасы']
+
             cur = conn.cursor()
             cur.execute("SELECT DISTINCT name_ru FROM genres WHERE name_ru IS NOT NULL ORDER BY name_ru")
             жанры = [row[0] for row in cur.fetchall()]
             cur.close()
             conn.close()
-            return жанры if жанры else ['Драма', 'Комедия', 'Ужасы']
+
+            if жанры:
+                return жанры
+            else:
+                return ['Драма', 'Комедия', 'Ужасы']
         except Exception as e:
             print(f"Ошибка загрузки жанров: {e}")
             return ['Драма', 'Комедия', 'Ужасы']
@@ -312,12 +339,17 @@ class ОкноПодбора(Screen):
             conn = подключиться_к_бд()
             if not conn:
                 return ['драматический', 'комедийный', 'ужасы']
+
             cur = conn.cursor()
             cur.execute("SELECT DISTINCT mood FROM movies WHERE mood IS NOT NULL ORDER BY mood")
             настроения = [row[0] for row in cur.fetchall()]
             cur.close()
             conn.close()
-            return настроения if настроения else ['драматический', 'комедийный', 'ужасы']
+
+            if настроения:
+                return настроения
+            else:
+                return ['драматический', 'комедийный', 'ужасы']
         except Exception as e:
             print(f"Ошибка загрузки настроений: {e}")
             return ['драматический', 'комедийный', 'ужасы']
@@ -327,12 +359,17 @@ class ОкноПодбора(Screen):
             conn = подключиться_к_бд()
             if not conn:
                 return ['PG', 'PG-13', 'R']
+
             cur = conn.cursor()
             cur.execute("SELECT DISTINCT age_rating FROM movies WHERE age_rating IS NOT NULL ORDER BY age_rating")
             рейтинги = [row[0] for row in cur.fetchall()]
             cur.close()
             conn.close()
-            return рейтинги if рейтинги else ['PG', 'PG-13', 'R']
+
+            if рейтинги:
+                return рейтинги
+            else:
+                return ['PG', 'PG-13', 'R']
         except Exception as e:
             print(f"Ошибка загрузки рейтингов: {e}")
             return ['PG', 'PG-13', 'R']
@@ -341,9 +378,12 @@ class ОкноПодбора(Screen):
         жанр = self.список_жанров.text
         настроение = self.настроение.text
         рейтинг = self.возрастной_рейтинг.text
+
         if жанр == 'Выберите жанр' or настроение == 'Выберите настроение' or рейтинг == 'Выберите возрастной рейтинг':
             return
+
         длительность = self.длительность.text
+
         if 'До 90' in длительность:
             min_len, max_len = 0, 90
         elif '90-120' in длительность:
@@ -352,7 +392,9 @@ class ОкноПодбора(Screen):
             min_len, max_len = 120, 150
         else:
             min_len, max_len = 150, 300
+
         период = self.период_выхода.text
+
         if '2020-2026' in период:
             min_year, max_year = 2020, 2026
         elif '2010-2019' in период:
@@ -361,10 +403,12 @@ class ОкноПодбора(Screen):
             min_year, max_year = 2000, 2009
         else:
             min_year, max_year = 1800, 1999
+
         try:
             conn = подключиться_к_бд()
             if not conn:
                 return
+
             cur = conn.cursor()
             cur.execute("""
                 SELECT m.id_movie, m.rus_title
@@ -382,11 +426,15 @@ class ОкноПодбора(Screen):
             фильм = cur.fetchone()
             cur.close()
             conn.close()
+
             if not фильм:
                 return
+
             id_film, название = фильм
+
             if self.кнопка_фильма:
                 self.layout.remove_widget(self.кнопка_фильма)
+
             self.кнопка_фильма = Button(
                 text=название,
                 size_hint=(None, None),
@@ -400,6 +448,7 @@ class ОкноПодбора(Screen):
             )
             self.кнопка_фильма.bind(on_press=lambda x: self.открыть_профиль_фильма(id_film))
             self.layout.add_widget(self.кнопка_фильма)
+
             app = App.get_running_app()
             if app.текущий_пользователь:
                 try:
@@ -413,8 +462,8 @@ class ОкноПодбора(Screen):
                     conn2.commit()
                     cur2.close()
                     conn2.close()
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Ошибка добавления в избранное: {e}")
         except Exception as e:
             print(f"Ошибка в найти_фильм: {e}")
 
@@ -431,7 +480,7 @@ class ОкноПодбора(Screen):
         self.manager.current = 'поиск'
 
     def вернуться_к_подбору(self, instance):
-        pass
+        self.manager.current = 'main_menu'
 
     def показать_статистику(self, instance):
         self.manager.current = 'статистика'
@@ -487,12 +536,17 @@ class ОкноПоиска(Screen):
 
     def установить_режим_поиска(self, режим):
         self.текущий_режим = режим
+
         if режим == 'Фильмы':
             self.поле_поиска.hint_text = 'Введите название фильма'
         elif режим == 'Актёры':
             self.поле_поиска.hint_text = 'Введите имя актёра'
         elif режим == 'Режиссёры':
             self.поле_поиска.hint_text = 'Введите имя режиссёра'
+
+        # Очистка поля поиска при переключении режима
+        self.поле_поиска.text = ''
+        self.грид_результатов.clear_widgets()
 
     def выполнить_поиск(self, instance):
         if not self.текущий_режим:
@@ -758,6 +812,8 @@ class ОкноПрофиля(Screen):
         self.add_widget(layout)
 
     def on_enter(self):
+        """Очистка поля поиска пользователя при входе"""
+        self.поиск_пользователя.text = ''
         self.обновить_видимость_элементов()
 
     def обновить_видимость_элементов(self):
@@ -767,6 +823,7 @@ class ОкноПрофиля(Screen):
             self.никнейм.text = app.текущий_пользователь.get('nickname', '')
             self.роль.text = роль
             видимость = (роль == 'admin')
+
             for btn in [self.кнопка_жанры, self.поиск_пользователя, self.найти_пользователя,
                         self.добавить_фильм, self.добавить_режиссёра, self.добавить_актёра]:
                 btn.opacity = 1 if видимость else 0
@@ -794,10 +851,12 @@ class ОкноПрофиля(Screen):
 
     def блок_пол(self, instance):
         никнейм = self.поиск_пользователя.text.strip()
+
         if not никнейм:
             popup = Popup(title='Ошибка', content=Label(text='Введите никнейм'), size_hint=(0.6, 0.4))
             popup.open()
             return
+
         try:
             conn = подключиться_к_бд()
             cur = conn.cursor()
@@ -805,6 +864,7 @@ class ОкноПрофиля(Screen):
             результат = cur.fetchone()
             cur.close()
             conn.close()
+
             if результат:
                 App.get_running_app().целевой_пользователь = {
                     'id': результат[0], 'nickname': результат[1], 'role': результат[2]
@@ -864,6 +924,7 @@ class ОкноСтатистики(Screen):
             if not conn:
                 self.показать_ошибку("Ошибка подключения к базе данных")
                 return
+
             cur = conn.cursor()
             cur.execute("""
                 SELECT 
@@ -1066,13 +1127,17 @@ class ОкноЖанров(Screen):
     def загрузить_жанры(self):
         try:
             conn = подключиться_к_бд()
-            if not conn: return
+            if not conn:
+                return
+
             cur = conn.cursor()
             cur.execute("SELECT id_genre, name_ru FROM genres ORDER BY name_ru")
             жанры = cur.fetchall()
             cur.close()
             conn.close()
+
             self.список_жанров.clear_widgets()
+
             for id_g, имя in жанры:
                 строка = FloatLayout(size_hint_y=None, height=40)
                 lbl = Label(text=имя, size_hint=(None, None), size=(250, 40),
@@ -1097,6 +1162,7 @@ class ОкноЖанров(Screen):
             popup = Popup(title='Ошибка', content=Label(text='Выберите жанр для удаления'), size_hint=(0.6, 0.4))
             popup.open()
             return
+
         try:
             conn = подключиться_к_бд()
             cur = conn.cursor()
@@ -1105,6 +1171,7 @@ class ОкноЖанров(Screen):
             conn.commit()
             cur.close()
             conn.close()
+
             popup = Popup(title='Успех', content=Label(text='Жанр удалён'), size_hint=(0.6, 0.4))
             popup.open()
             self.текущий_жанр_id = None
@@ -1116,10 +1183,12 @@ class ОкноЖанров(Screen):
 
     def сохранить_жанр(self, instance=None):
         новое_название = self.поле_жанра.text.strip()
+
         if not новое_название or not self.текущий_жанр_id:
             popup = Popup(title='Ошибка', content=Label(text='Введите название и выберите жанр'), size_hint=(0.6, 0.4))
             popup.open()
             return
+
         try:
             conn = подключиться_к_бд()
             cur = conn.cursor()
@@ -1127,6 +1196,7 @@ class ОкноЖанров(Screen):
             conn.commit()
             cur.close()
             conn.close()
+
             popup = Popup(title='Успех', content=Label(text='Название жанра изменено'), size_hint=(0.6, 0.4))
             popup.open()
             self.загрузить_жанры()
@@ -1136,10 +1206,12 @@ class ОкноЖанров(Screen):
 
     def добавить_жанр(self, instance):
         новое_название = self.поле_жанра.text.strip()
+
         if not новое_название:
             popup = Popup(title='Ошибка', content=Label(text='Введите название нового жанра'), size_hint=(0.6, 0.4))
             popup.open()
             return
+
         try:
             conn = подключиться_к_бд()
             cur = conn.cursor()
@@ -1147,9 +1219,10 @@ class ОкноЖанров(Screen):
             conn.commit()
             cur.close()
             conn.close()
+
             popup = Popup(title='Успех', content=Label(text='Жанр добавлен'), size_hint=(0.6, 0.4))
             popup.open()
-            self.поле_жанрa.text = ''
+            self.поле_жанра.text = ''
             self.загрузить_жанры()
         except Exception as e:
             popup = Popup(title='Ошибка', content=Label(text=str(e)), size_hint=(0.6, 0.4))
@@ -1233,10 +1306,12 @@ class ОкноБлокировкиПользователя(Screen):
         if not hasattr(app, 'целевой_пользователь'):
             self.manager.current = 'профиль'
             return
+
         целевой = app.целевой_пользователь
         if not целевой or 'id' not in целевой:
             self.manager.current = 'профиль'
             return
+
         self.никнейм.text = целевой['nickname']
         self.пароль.text = ''
         self.роль.text = целевой['role']
@@ -1246,12 +1321,15 @@ class ОкноБлокировкиПользователя(Screen):
         app = App.get_running_app()
         целевой = app.целевой_пользователь
         текущий = app.текущий_пользователь
+
         if текущий.get('role') != 'admin':
             for widget in [self.пароль, self.роль, self.кнопка_сохранить, self.кнопка_заблокировать]:
                 widget.disabled = True
             return
+
         self.пароль.disabled = False
         self.кнопка_сохранить.disabled = False
+
         if целевой['role'] == 'admin':
             self.роль.disabled = True
             self.кнопка_заблокировать.disabled = True
@@ -1263,14 +1341,18 @@ class ОкноБлокировкиПользователя(Screen):
         app = App.get_running_app()
         целевой = app.целевой_пользователь
         новая_роль = self.роль.text
+
         try:
             conn = подключиться_к_бд()
             cur = conn.cursor()
+
             if целевой['role'] != 'admin':
                 cur.execute("UPDATE users SET role = %s WHERE id_user = %s", (новая_роль, целевой['id']))
+
             conn.commit()
             cur.close()
             conn.close()
+
             popup = Popup(title='Успех', content=Label(text='Изменения сохранены'), size_hint=(0.6, 0.4))
             popup.open()
             целевой['role'] = новая_роль
@@ -1282,11 +1364,13 @@ class ОкноБлокировкиПользователя(Screen):
     def заблокировать_пользователя(self, instance):
         app = App.get_running_app()
         целевой = app.целевой_пользователь
+
         if целевой['role'] == 'admin':
             popup = Popup(title='Ошибка', content=Label(text='Нельзя заблокировать администратора'),
                           size_hint=(0.6, 0.4))
             popup.open()
             return
+
         try:
             conn = подключиться_к_бд()
             cur = conn.cursor()
@@ -1294,6 +1378,7 @@ class ОкноБлокировкиПользователя(Screen):
             conn.commit()
             cur.close()
             conn.close()
+
             popup = Popup(title='Успех', content=Label(text='Пользователь заблокирован'), size_hint=(0.6, 0.4))
             popup.open()
             self.manager.current = 'профиль'
@@ -1557,6 +1642,7 @@ class ОкноДобавленияФильма(Screen):
             cur.execute("SELECT id_director, first_name, second_name FROM directors ORDER BY first_name, second_name")
             режиссеры = cur.fetchall()
             значения_режиссеров = ['Выберите режиссёра']
+
             for id_dir, имя, фамилия in режиссеры:
                 полное_имя = f"{имя} {фамилия}".strip()
                 значения_режиссеров.append(полное_имя)
@@ -1566,6 +1652,7 @@ class ОкноДобавленияФильма(Screen):
             cur.execute("SELECT id_actor, first_name, second_name FROM actors ORDER BY first_name, second_name")
             актеры = cur.fetchall()
             значения_актеров = ['Выберите актёра']
+
             for id_act, имя, фамилия in актеры:
                 полное_имя = f"{имя} {фамилия}".strip()
                 значения_актеров.append(полное_имя)
@@ -1575,6 +1662,7 @@ class ОкноДобавленияФильма(Screen):
             cur.execute("SELECT id_genre, name_ru FROM genres WHERE name_ru IS NOT NULL ORDER BY name_ru")
             жанры = cur.fetchall()
             значения_жанров = ['Выберите жанр']
+
             for id_genre, название in жанры:
                 значения_жанров.append(название)
             self.спиннер_жанры.values = значения_жанров
@@ -1583,6 +1671,7 @@ class ОкноДобавленияФильма(Screen):
             cur.execute("SELECT DISTINCT age_rating FROM movies WHERE age_rating IS NOT NULL ORDER BY age_rating")
             рейтинги = cur.fetchall()
             значения_рейтингов = ['Выберите возрастной рейтинг']
+
             for row in рейтинги:
                 if row[0]:  # Проверяем, что значение не None
                     значения_рейтингов.append(row[0])
@@ -1592,6 +1681,7 @@ class ОкноДобавленияФильма(Screen):
             cur.execute("SELECT DISTINCT mood FROM movies WHERE mood IS NOT NULL ORDER BY mood")
             настроения = cur.fetchall()
             значения_настроений = ['Выберите настроение']
+
             for row in настроения:
                 if row[0]:  # Проверяем, что значение не None
                     значения_настроений.append(row[0])
@@ -1605,6 +1695,7 @@ class ОкноДобавленияФильма(Screen):
 
     def добавить_режиссера(self, instance):
         выбранный = self.спиннер_режиссеры.text
+
         if выбранный != 'Выберите режиссёра' and выбранный not in self.выбранные_режиссеры:
             self.выбранные_режиссеры.append(выбранный)
             self.обновить_метку_добавлено()
@@ -1612,6 +1703,7 @@ class ОкноДобавленияФильма(Screen):
 
     def добавить_актера(self, instance):
         выбранный = self.спиннер_актеры.text
+
         if выбранный != 'Выберите актёра' and выбранный not in self.выбранные_актеры:
             self.выбранные_актеры.append(выбранный)
             self.обновить_метку_добавлено()
@@ -1619,6 +1711,7 @@ class ОкноДобавленияФильма(Screen):
 
     def добавить_жанр(self, instance):
         выбранный = self.спиннер_жанры.text
+
         if выбранный != 'Выберите жанр' and выбранный not in self.выбранные_жанры:
             self.выбранные_жанры.append(выбранный)
             self.обновить_метку_добавлено()
@@ -1842,7 +1935,6 @@ class ОкноДобавленияФильма(Screen):
         self.manager.current = 'профиль'
 
 
-# dfggsgddgdgdgdgdg
 class ОкноДобавленияАктёра(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1888,6 +1980,7 @@ class ОкноДобавленияАктёра(Screen):
                 self.поле_фамилия = ti
             elif hint == "Введите дату рождения (ГГГГ-ММ-ДД)":
                 self.поле_дата_рождения = ti
+
         self.поле_ввода_страны = TextInput(
             size_hint=(None, None),
             size=(300, 40),
@@ -1899,6 +1992,7 @@ class ОкноДобавленияАктёра(Screen):
             font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_ввода_страны)
+
         правая_колонка_x = 0.4
         self.поле_дата_смерти = TextInput(
             size_hint=(None, None),
@@ -1987,6 +2081,7 @@ class ОкноДобавленияАктёра(Screen):
             cur.execute("SELECT id_movie, rus_title FROM movies WHERE rus_title IS NOT NULL ORDER BY rus_title")
             фильмы = cur.fetchall()
             значения_фильмов = ['Выберите фильм']
+
             for id_movie, название in фильмы:
                 значения_фильмов.append(название)
             self.спиннер_фильмы.values = значения_фильмов
@@ -1999,6 +2094,7 @@ class ОкноДобавленияАктёра(Screen):
 
     def добавить_фильм(self, instance):
         выбранный = self.спиннер_фильмы.text
+
         if выбранный != 'Выберите фильм' and выбранный not in self.выбранные_фильмы:
             self.выбранные_фильмы.append(выбранный)
             self.обновить_метку_добавлено()
@@ -2083,6 +2179,7 @@ class ОкноДобавленияАктёра(Screen):
                 # Ищем ID фильма по названию
                 cur.execute("SELECT id_movie FROM movies WHERE rus_title = %s", (название_фильма,))
                 результат = cur.fetchone()
+
                 if результат:
                     id_фильма = результат[0]
                     cur.execute("INSERT INTO acting (id_movie, id_actor) VALUES (%s, %s)",
@@ -2140,8 +2237,6 @@ class ОкноДобавленияАктёра(Screen):
         self.manager.current = 'профиль'
 
 
-# ghhgjgjhghjghjhj
-
 class ОкноДобавленияРежиссёра(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -2187,6 +2282,7 @@ class ОкноДобавленияРежиссёра(Screen):
                 self.поле_фамилия = ti
             elif hint == "Введите дату рождения (ГГГГ-ММ-ДД)":
                 self.поле_дата_рождения = ti
+
         self.поле_ввода_страны = TextInput(
             size_hint=(None, None),
             size=(300, 40),
@@ -2198,6 +2294,7 @@ class ОкноДобавленияРежиссёра(Screen):
             font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_ввода_страны)
+
         правая_колонка_x = 0.4
         self.поле_дата_смерти = TextInput(
             size_hint=(None, None),
@@ -2286,6 +2383,7 @@ class ОкноДобавленияРежиссёра(Screen):
             cur.execute("SELECT id_movie, rus_title FROM movies WHERE rus_title IS NOT NULL ORDER BY rus_title")
             фильмы = cur.fetchall()
             значения_фильмов = ['Выберите фильм']
+
             for id_movie, название in фильмы:
                 значения_фильмов.append(название)
             self.спиннер_фильмы.values = значения_фильмов
@@ -2298,6 +2396,7 @@ class ОкноДобавленияРежиссёра(Screen):
 
     def добавить_фильм(self, instance):
         выбранный = self.спиннер_фильмы.text
+
         if выбранный != 'Выберите фильм' and выбранный not in self.выбранные_фильмы:
             self.выбранные_фильмы.append(выбранный)
             self.обновить_метку_добавлено()
@@ -2382,6 +2481,7 @@ class ОкноДобавленияРежиссёра(Screen):
                 # Ищем ID фильма по названию
                 cur.execute("SELECT id_movie FROM movies WHERE rus_title = %s", (название_фильма,))
                 результат = cur.fetchone()
+
                 if результат:
                     id_фильма = результат[0]
                     cur.execute("INSERT INTO directing (id_movie, id_director) VALUES (%s, %s)",
@@ -2578,13 +2678,19 @@ class ОкноРедактированияСписка(Screen):
             conn = подключиться_к_бд()
             if not conn:
                 return f"Фильм #{id_film}"
+
             cur = conn.cursor()
             cur.execute("SELECT rus_title FROM movies WHERE id_movie = %s", (id_film,))
             результат = cur.fetchone()
             cur.close()
             conn.close()
-            return результат[0] if результат else f"Фильм #{id_film}"
-        except:
+
+            if результат:
+                return результат[0]
+            else:
+                return f"Фильм #{id_film}"
+        except Exception as e:
+            print(f"Ошибка получения названия фильма: {e}")
             return f"Фильм #{id_film}"
 
     def получить_имя_режиссера(self, id_dir):
@@ -2592,16 +2698,19 @@ class ОкноРедактированияСписка(Screen):
             conn = подключиться_к_бд()
             if not conn:
                 return f"Режиссёр #{id_dir}"
+
             cur = conn.cursor()
             cur.execute("SELECT first_name, second_name FROM directors WHERE id_director = %s", (id_dir,))
             результат = cur.fetchone()
             cur.close()
             conn.close()
+
             if результат:
                 имя, фамилия = результат
                 return f"{имя} {фамилия}" if фамилия else имя
             return f"Режиссёр #{id_dir}"
-        except:
+        except Exception as e:
+            print(f"Ошибка получения имени режиссёра: {e}")
             return f"Режиссёр #{id_dir}"
 
     def получить_имя_актера(self, id_act):
@@ -2609,16 +2718,19 @@ class ОкноРедактированияСписка(Screen):
             conn = подключиться_к_бд()
             if not conn:
                 return f"Актёр #{id_act}"
+
             cur = conn.cursor()
             cur.execute("SELECT first_name, second_name FROM actors WHERE id_actor = %s", (id_act,))
             результат = cur.fetchone()
             cur.close()
             conn.close()
+
             if результат:
                 имя, фамилия = результат
                 return f"{имя} {фамилия}" if фамилия else имя
             return f"Актёр #{id_act}"
-        except:
+        except Exception as e:
+            print(f"Ошибка получения имени актёра: {e}")
             return f"Актёр #{id_act}"
 
     def получить_название_жанра(self, id_genre):
@@ -2626,13 +2738,19 @@ class ОкноРедактированияСписка(Screen):
             conn = подключиться_к_бд()
             if not conn:
                 return f"Жанр #{id_genre}"
+
             cur = conn.cursor()
             cur.execute("SELECT name_ru FROM genres WHERE id_genre = %s", (id_genre,))
             результат = cur.fetchone()
             cur.close()
             conn.close()
-            return результат[0] if результат else f"Жанр #{id_genre}"
-        except:
+
+            if результат:
+                return результат[0]
+            else:
+                return f"Жанр #{id_genre}"
+        except Exception as e:
+            print(f"Ошибка получения названия жанра: {e}")
             return f"Жанр #{id_genre}"
 
     def загрузить_данные_из_бд(self):
@@ -3053,6 +3171,7 @@ class ОкноПрофиляФильма(Screen):
         app = App.get_running_app()
         if app.текущий_пользователь:
             роль = app.текущий_пользователь.get('role', 'user')
+
             if роль == 'user':
                 for поле in [self.поле_название, self.поле_ориг_название, self.поле_длительность,
                              self.поле_дата_выхода]:
@@ -3473,8 +3592,7 @@ class ОкноПрофиляАктёра(Screen):
                 self.кнопка_удалить.opacity = 0
                 self.кнопка_удалить.disabled = True
             else:
-                for поле in [self.поле_имя, self.поле_фамилия, self.поле_дата_рождения,
-                             self.поле_дата_смерти, self.поле_страна]:
+                for поле in[self.поле_имя, self.поле_фамилия, self.поле_дата_рождения,self.поле_дата_смерти, self.поле_страна]:
                     поле.readonly = False
 
                 self.btn_edit_films.opacity = 1
@@ -3540,7 +3658,7 @@ class ОкноПрофиляАктёра(Screen):
             )
             self.грид_фильмы.add_widget(label)
 
-    def сохранить_изменения(self,instance=None):
+    def сохранить_изменения(self, instance=None):
         try:
             conn = подключиться_к_бд()
             if not conn:
@@ -3892,7 +4010,7 @@ class ОкноПрофиляРежиссёра(Screen):
             popup = Popup(title='Ошибка', content=Label(text=f'Ошибка при сохранении: {str(e)}'), size_hint=(0.6, 0.4))
             popup.open()
 
-    def удалить_режиссера(self):
+    def удалить_режиссера(self,instance=None):
         if not self.id_режиссера:
             return
 
