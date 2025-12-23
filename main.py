@@ -4,7 +4,6 @@ from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.image import Image, AsyncImage
-from kivy.config import Config
 from kivy.uix.textinput import TextInput
 from kivy.core.window import Window
 from kivy.uix.spinner import Spinner
@@ -12,10 +11,9 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.popup import Popup
 from kivy.uix.boxlayout import BoxLayout
-from kivy.graphics import Color, Rectangle
 import psycopg2
 from datetime import datetime
-import urllib.parse
+
 def подключиться_к_бд():
     try:
         connection = psycopg2.connect(**DB_CONFIG)
@@ -24,7 +22,6 @@ def подключиться_к_бд():
         print(f"Ошибка подключения к БД: {e}")
         return None
 
-
 DB_CONFIG = {
     'host': '5.183.188.132',
     'database': '2025_psql_vldm',
@@ -32,7 +29,6 @@ DB_CONFIG = {
     'password': 'x4MFD0xYKJW7Lnb9',
     'port': '5432'
 }
-
 
 class БазоваяКнопка(Button):
     def __init__(self, **kwargs):
@@ -43,30 +39,37 @@ class БазоваяКнопка(Button):
         self.background_down = 'Кнопка2.png'
         self.color = (0, 0, 0, 1)
         self.font_name = "couriercyrps_bold.ttf"
+
 class КнопкаПодбора(БазоваяКнопка):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.text = 'Подбор'
+
 class КнопкаФильмы(БазоваяКнопка):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.text = 'Фильмы'
+
 class КнопкаРежиссеры(БазоваяКнопка):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.text = 'Режиссёры'
+
 class КнопкаАктеры(БазоваяКнопка):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.text = 'Актёры'
+
 class КнопкаСтатистика(БазоваяКнопка):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.text = 'Статистика'
+
 class КнопкаПрофиль(БазоваяКнопка):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.text = 'Профиль'
+
 def создать_панель_навигации(экран, позиция_y=0.9):
     layout = FloatLayout()
     кнопки = [
@@ -92,6 +95,7 @@ def создать_панель_навигации(экран, позиция_y=
             кнопка.bind(on_press=экран.показать_профиль)
         layout.add_widget(кнопка)
     return layout
+
 class ОкноАвторизации(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -129,7 +133,8 @@ class ОкноАвторизации(Screen):
             size_hint=(None, None),
             size=(400, 50),
             pos_hint={'center_x': 0.5, 'center_y': 0.4},
-            font_size=20, color=(1, 0, 0, 1),
+            font_size=20,
+            color=(1, 0, 0, 1),
             font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.статус_метка)
@@ -186,6 +191,7 @@ class ОкноАвторизации(Screen):
         except Exception as e:
             self.статус_метка.text = f'Ошибка: {str(e)}'
             print(f"Ошибка авторизации: {e}")
+
     def сохранить_данные_пользователя(self, id_пользователя, никнейм, роль):
         app = App.get_running_app()
         app.текущий_пользователь = {
@@ -193,8 +199,10 @@ class ОкноАвторизации(Screen):
             'nickname': никнейм,
             'role': роль
         }
+
     def перейти_в_окно_подбора(self, instance):
         self.manager.current = 'main_menu'
+
 class ОкноПодбора(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -296,8 +304,10 @@ class ОкноПодбора(Screen):
         self.кнопка_фильма = None
         self.add_widget(background)
         self.add_widget(self.layout)
+
     def on_enter(self):
         self.очистить_поля()
+
     def очистить_поля(self):
         self.список_жанров.text = 'Выберите жанр'
         self.длительность.text = 'Выберите длительность'
@@ -308,23 +318,34 @@ class ОкноПодбора(Screen):
         if self.кнопка_фильма:
             self.layout.remove_widget(self.кнопка_фильма)
             self.кнопка_фильма = None
+
     def загрузить_жанры_из_бд(self):
         try:
             conn = подключиться_к_бд()
             if not conn:
-                return ['Драма', 'Комедия', 'Ужасы']
+                return []
+
             cur = conn.cursor()
-            cur.execute("SELECT DISTINCT name_ru FROM genres WHERE name_ru IS NOT NULL ORDER BY name_ru")
-            жанры = [row[0] for row in cur.fetchall()]
+            cur.execute("""
+                SELECT DISTINCT name_ru 
+                FROM genres 
+                WHERE name_ru IS NOT NULL 
+                ORDER BY name_ru
+            """)
+
+            жанры = []
+            for row in cur.fetchall():
+                жанры.append(row[0])
+
             cur.close()
             conn.close()
-            if жанры:
-                return жанры
-            else:
-                return ['Драма', 'Комедия', 'Ужасы']
+
+            return жанры
+
         except Exception as e:
             print(f"Ошибка загрузки жанров: {e}")
-            return ['Драма', 'Комедия', 'Ужасы']
+            return []
+
     def загрузить_настроения_из_бд(self):
         try:
             conn = подключиться_к_бд()
@@ -342,6 +363,7 @@ class ОкноПодбора(Screen):
         except Exception as e:
             print(f"Ошибка загрузки настроений: {e}")
             return ['драматический', 'комедийный', 'ужасы']
+
     def загрузить_рейтинги_из_бд(self):
         try:
             conn = подключиться_к_бд()
@@ -359,6 +381,7 @@ class ОкноПодбора(Screen):
         except Exception as e:
             print(f"Ошибка загрузки рейтингов: {e}")
             return ['PG', 'PG-13', 'R']
+
     def найти_фильм(self, instance):
         жанр = self.список_жанров.text
         настроение = self.настроение.text
@@ -422,7 +445,8 @@ class ОкноПодбора(Screen):
                 pos_hint={'center_x': 0.7, 'center_y': 0.7},
                 font_size=24,
                 background_color=(0, 0, 0, 0),
-                background_normal='', background_down='',
+                background_normal='',
+                background_down='',
                 color=(0, 0, 0, 1),
                 font_name="couriercyrps_bold.ttf"
             )
@@ -447,22 +471,28 @@ class ОкноПодбора(Screen):
         except Exception as e:
             print(f"Ошибка в найти_фильм: {e}")
             self.метка_сообщения.text = f'Ошибка поиска: {str(e)}'
+
     def открыть_профиль_фильма(self, id_film):
         app = App.get_running_app()
         app.выбранный_фильм_id = id_film
         профиль_фильма = self.manager.get_screen('профиль_фильма')
         профиль_фильма.загрузить_данные_фильма(id_film)
         self.manager.current = 'профиль_фильма'
+
     def перейти_к_поиску(self, instance):
         тип_поиска = instance.text
         self.manager.get_screen('поиск').установить_режим_поиска(тип_поиска)
         self.manager.current = 'поиск'
+
     def вернуться_к_подбору(self, instance):
         self.manager.current = 'main_menu'
+
     def показать_статистику(self, instance):
         self.manager.current = 'статистика'
+
     def показать_профиль(self, instance):
         self.manager.current = 'профиль'
+
 class ОкноПоиска(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -483,7 +513,8 @@ class ОкноПоиска(Screen):
         )
         layout.add_widget(self.поле_поиска)
         кнопка_найти = Button(
-            text='Найти', size_hint=(None, None),
+            text='Найти',
+            size_hint=(None, None),
             size=(200, 100),
             pos_hint={'center_x': 0.5, 'center_y': 0.08},
             background_normal='Кнопка1.png',
@@ -494,9 +525,11 @@ class ОкноПоиска(Screen):
         кнопка_найти.bind(on_press=self.выполнить_поиск)
         layout.add_widget(кнопка_найти)
         scroll = ScrollView(
-            size_hint=(None, None), size=(800, 350),
+            size_hint=(None, None),
+            size=(800, 350),
             pos_hint={'center_x': 0.5, 'center_y': 0.4},
-            do_scroll_x=False, do_scroll_y=True
+            do_scroll_x=False,
+            do_scroll_y=True
         )
         self.грид_результатов = GridLayout(cols=1, size_hint_y=None, spacing=5)
         self.грид_результатов.bind(minimum_height=self.грид_результатов.setter('height'))
@@ -505,6 +538,7 @@ class ОкноПоиска(Screen):
         self.текущий_режим = None
         self.add_widget(background)
         self.add_widget(layout)
+
     def установить_режим_поиска(self, режим):
         self.текущий_режим = режим
         if режим == 'Фильмы':
@@ -515,6 +549,7 @@ class ОкноПоиска(Screen):
             self.поле_поиска.hint_text = 'Введите имя режиссёра'
         self.поле_поиска.text = ''
         self.грид_результатов.clear_widgets()
+
     def выполнить_поиск(self, instance):
         if not self.текущий_режим:
             return
@@ -647,33 +682,41 @@ class ОкноПоиска(Screen):
                 font_name="couriercyrps_bold.ttf"
             )
             self.грид_результатов.add_widget(метка)
+
     def открыть_профиль_фильма(self, id_film):
         app = App.get_running_app()
         app.выбранный_фильм_id = id_film
         профиль_фильма = self.manager.get_screen('профиль_фильма')
         профиль_фильма.загрузить_данные_фильма(id_film)
         self.manager.current = 'профиль_фильма'
+
     def открыть_профиль_актера(self, id_actor):
         app = App.get_running_app()
         app.выбранный_актер_id = id_actor
         профиль_актера = self.manager.get_screen('профиль_актера')
         профиль_актера.загрузить_данные_актера(id_actor)
         self.manager.current = 'профиль_актера'
+
     def открыть_профиль_режиссера(self, id_director):
         app = App.get_running_app()
         app.выбранный_режиссер_id = id_director
         профиль_режиссера = self.manager.get_screen('профиль_режиссера')
         профиль_режиссера.загрузить_данные_режиссера(id_director)
         self.manager.current = 'профиль_режиссера'
+
     def перейти_к_поиску(self, instance):
         тип_поиска = instance.text
         self.установить_режим_поиска(тип_поиска)
+
     def вернуться_к_подбору(self, instance):
         self.manager.current = 'main_menu'
+
     def показать_статистику(self, instance):
         self.manager.current = 'статистика'
+
     def показать_профиль(self, instance):
         self.manager.current = 'профиль'
+
 class ОкноПрофиля(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -688,7 +731,6 @@ class ОкноПрофиля(Screen):
             pos_hint={'center_x': 0.11, 'center_y': 0.67},
             allow_stretch=True,
             keep_ratio=True,
-            color=(0, 0, 0, 0)
         )
         self.layout.add_widget(self.изображение_фото)
         self.кнопка_фото = Button(
@@ -727,7 +769,8 @@ class ОкноПрофиля(Screen):
         )
         self.layout.add_widget(self.пароль)
         self.роль = TextInput(
-            size_hint=(None, None), size=(400, 50),
+            size_hint=(None, None),
+            size=(400, 50),
             pos_hint={'center_x': 0.3, 'center_y': 0.67},
             hint_text='роль',
             hint_text_color=(0, 0, 0, 1),
@@ -751,8 +794,8 @@ class ОкноПрофиля(Screen):
         self.layout.add_widget(self.кнопка_жанры)
         self.поиск_пользователя = TextInput(
             size_hint=(None, None),
-            size=(200, 100),
-            pos_hint={'center_x': 0.9, 'center_y': 0.73},
+            size=(200, 50),
+            pos_hint={'center_x': 0.9, 'center_y': 0.76},
             hint_text='Введите никнейм',
             hint_text_color=(0, 0, 0, 1),
             font_size=20,
@@ -764,8 +807,8 @@ class ОкноПрофиля(Screen):
         self.найти_пользователя = Button(
             text='Найти пользователя',
             size_hint=(None, None),
-            size=(200, 100),
-            pos_hint={'center_x': 0.9, 'center_y': 0.71},
+            size=(200, 50),
+            pos_hint={'center_x': 0.9, 'center_y': 0.68},
             background_color=(0, 0, 0, 0),
             color=(0, 0, 0, 1),
             font_size=20,
@@ -775,9 +818,9 @@ class ОкноПрофиля(Screen):
         self.найти_пользователя.bind(on_press=self.блок_пол)
         self.добавить_фильм = Button(
             text='Добавить фильм',
-            ize_hint=(None, None),
-            size=(200, 100),
-            pos_hint={'center_x': 0.9, 'center_y': 0.66},
+            size_hint=(None, None),
+            size=(200, 50),
+            pos_hint={'center_x': 0.9, 'center_y': 0.63},
             background_color=(0, 0, 0, 0),
             color=(0, 0, 0, 1),
             font_size=20,
@@ -788,8 +831,8 @@ class ОкноПрофиля(Screen):
         self.добавить_режиссёра = Button(
             text='Добавить режиссёра',
             size_hint=(None, None),
-            size=(200, 100),
-            pos_hint={'center_x': 0.9, 'center_y': 0.61},
+            size=(200, 50),
+            pos_hint={'center_x': 0.9, 'center_y': 0.58},
             background_color=(0, 0, 0, 0),
             color=(0, 0, 0, 1),
             font_size=20,
@@ -800,8 +843,8 @@ class ОкноПрофиля(Screen):
         self.добавить_актёра = Button(
             text='Добавить актёра',
             size_hint=(None, None),
-            size=(200, 100),
-            pos_hint={'center_x': 0.9, 'center_y': 0.56},
+            size=(200, 50),
+            pos_hint={'center_x': 0.9, 'center_y': 0.53},
             background_color=(0, 0, 0, 0),
             color=(0, 0, 0, 1),
             font_size=20,
@@ -811,10 +854,12 @@ class ОкноПрофиля(Screen):
         self.layout.add_widget(self.добавить_актёра)
         self.add_widget(background)
         self.add_widget(self.layout)
+
     def on_enter(self):
         self.поиск_пользователя.text = ''
         self.обновить_видимость_элементов()
         self.загрузить_фото_пользователя()
+
     def загрузить_фото_пользователя(self):
         app = App.get_running_app()
         if not app.текущий_пользователь:
@@ -824,7 +869,7 @@ class ОкноПрофиля(Screen):
             if not conn:
                 return
             cur = conn.cursor()
-            cur.execute("SELECT prof_pic_link FROM users WHERE id_user = %s",(app.текущий_пользователь['id'],))
+            cur.execute("SELECT prof_pic_link FROM users WHERE id_user = %s", (app.текущий_пользователь['id'],))
             результат = cur.fetchone()
             cur.close()
             conn.close()
@@ -836,6 +881,7 @@ class ОкноПрофиля(Screen):
                 self.кнопка_фото.opacity = 0.7
         except Exception as e:
             print(f"Ошибка загрузки фото пользователя: {e}")
+
     def обновить_видимость_элементов(self):
         app = App.get_running_app()
         if app.текущий_пользователь:
@@ -843,23 +889,31 @@ class ОкноПрофиля(Screen):
             self.никнейм.text = app.текущий_пользователь.get('nickname', '')
             self.роль.text = роль
             видимость = (роль == 'admin')
-            for btn in [self.кнопка_жанры, self.поиск_пользователя, self.найти_пользователя,self.добавить_фильм, self.добавить_режиссёра, self.добавить_актёра]:
+            for btn in [self.кнопка_жанры, self.поиск_пользователя, self.найти_пользователя,
+                        self.добавить_фильм, self.добавить_режиссёра, self.добавить_актёра]:
                 btn.opacity = 1 if видимость else 0
                 btn.disabled = not видимость
+
     def перейти_в_окно_жанров(self, instance):
         self.manager.current = 'жанры'
+
     def перейти_в_окно_добавления_актёров(self, instance):
         self.manager.current = 'добавить_актёра'
+
     def перейти_в_окно_добавления_режиссёров(self, instance):
         self.manager.current = 'добавить_режиссёра'
+
     def перейти_к_поиску(self, instance):
         тип_поиска = instance.text
         self.manager.get_screen('поиск').установить_режим_поиска(тип_поиска)
         self.manager.current = 'поиск'
+
     def вернуться_к_подбору(self, instance):
         self.manager.current = 'main_menu'
+
     def показать_статистику(self, instance):
         self.manager.current = 'статистика'
+
     def блок_пол(self, instance):
         никнейм = self.поиск_пользователя.text.strip()
         if not никнейм:
@@ -875,7 +929,9 @@ class ОкноПрофиля(Screen):
             conn.close()
             if результат:
                 App.get_running_app().целевой_пользователь = {
-                    'id': результат[0], 'nickname': результат[1], 'role': результат[2]
+                    'id': результат[0],
+                    'nickname': результат[1],
+                    'role': результат[2]
                 }
                 self.manager.current = 'блокировка_пользователя'
             else:
@@ -884,10 +940,13 @@ class ОкноПрофиля(Screen):
         except Exception as e:
             popup = Popup(title='Ошибка', content=Label(text=str(e)), size_hint=(0.6, 0.4))
             popup.open()
+
     def показать_профиль(self, instance):
         pass
+
     def перейти_в_окно_добавления_фильма(self, instance):
         self.manager.current = 'добавить_фильм'
+
     def добавить_фото(self, instance):
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
         предустановки = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
@@ -933,6 +992,7 @@ class ОкноПрофиля(Screen):
             size_hint=(0.8, 0.5)
         )
         popup.open()
+
     def сохранить_фото_в_бд(self, ссылка):
         app = App.get_running_app()
         if app.текущий_пользователь:
@@ -952,6 +1012,7 @@ class ОкноПрофиля(Screen):
             except Exception as e:
                 print(f"Ошибка сохранения фото: {e}")
                 self.показать_сообщение(f'Ошибка: {str(e)}')
+
     def показать_сообщение(self, текст):
         popup = Popup(
             title='Сообщение',
@@ -959,6 +1020,7 @@ class ОкноПрофиля(Screen):
             size_hint=(0.6, 0.4)
         )
         popup.open()
+
 class ОкноСтатистики(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -991,6 +1053,7 @@ class ОкноСтатистики(Screen):
         layout.add_widget(scroll)
         self.add_widget(background)
         self.add_widget(layout)
+
     def сформировать_статистику(self, instance=None):
         try:
             conn = подключиться_к_бд()
@@ -1099,6 +1162,7 @@ class ОкноСтатистики(Screen):
         except Exception as e:
             print(f"Ошибка при формировании статистики: {e}")
             self.показать_ошибку(f"Ошибка: {str(e)}")
+
     def показать_ошибку(self, сообщение):
         self.контейнер_статистики.clear_widgets()
         метка = Label(
@@ -1110,17 +1174,22 @@ class ОкноСтатистики(Screen):
             font_name="couriercyrps_bold.ttf"
         )
         self.контейнер_статистики.add_widget(метка)
+
     def перейти_к_поиску(self, instance=None):
         if instance:
             тип_поиска = instance.text
             self.manager.get_screen('поиск').установить_режим_поиска(тип_поиска)
         self.manager.current = 'поиск'
+
     def вернуться_к_подбору(self, instance=None):
         self.manager.current = 'main_menu'
+
     def показать_статистику(self, instance=None):
         pass
+
     def показать_профиль(self, instance=None):
         self.manager.current = 'профиль'
+
 class ОкноЖанров(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1183,6 +1252,7 @@ class ОкноЖанров(Screen):
         self.add_widget(layout)
         self.текущий_жанр_id = None
         self.загрузить_жанры()
+
     def загрузить_жанры(self):
         try:
             conn = подключиться_к_бд()
@@ -1219,9 +1289,11 @@ class ОкноЖанров(Screen):
                 self.список_жанров.add_widget(строка)
         except Exception as e:
             print(f"Ошибка загрузки жанров: {e}")
+
     def выбрать_жанр(self, id_g, имя):
         self.текущий_жанр_id = id_g
         self.поле_жанра.text = имя
+
     def удалить_жанр(self, instance):
         if not self.текущий_жанр_id:
             popup = Popup(title='Ошибка', content=Label(text='Выберите жанр для удаления'), size_hint=(0.6, 0.4))
@@ -1243,6 +1315,7 @@ class ОкноЖанров(Screen):
         except Exception as e:
             popup = Popup(title='Ошибка', content=Label(text=str(e)), size_hint=(0.6, 0.4))
             popup.open()
+
     def сохранить_жанр(self, instance=None):
         новое_название = self.поле_жанра.text.strip()
         if not новое_название or not self.текущий_жанр_id:
@@ -1262,6 +1335,7 @@ class ОкноЖанров(Screen):
         except Exception as e:
             popup = Popup(title='Ошибка', content=Label(text=str(e)), size_hint=(0.6, 0.4))
             popup.open()
+
     def добавить_жанр(self, instance):
         новое_название = self.поле_жанра.text.strip()
         if not новое_название:
@@ -1271,7 +1345,7 @@ class ОкноЖанров(Screen):
         try:
             conn = подключиться_к_бд()
             cur = conn.cursor()
-            cur.execute("INSERT INTO genres (name, name_ru) VALUES (%s, %s)", (новое_название, новое_название))
+            cur.execute("INSERT INTO genres (name_ru) VALUES (%s)", (новое_название,))
             conn.commit()
             cur.close()
             conn.close()
@@ -1282,16 +1356,21 @@ class ОкноЖанров(Screen):
         except Exception as e:
             popup = Popup(title='Ошибка', content=Label(text=str(e)), size_hint=(0.6, 0.4))
             popup.open()
+
     def перейти_к_поиску(self, instance):
         тип_поиска = instance.text
         self.manager.get_screen('поиск').установить_режим_поиска(тип_поиска)
         self.manager.current = 'поиск'
+
     def вернуться_к_подбору(self, instance):
         self.manager.current = 'main_menu'
+
     def показать_статистику(self, instance):
         self.manager.current = 'статистика'
+
     def показать_профиль(self, instance):
         self.manager.current = 'профиль'
+
 class ОкноБлокировкиПользователя(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1355,7 +1434,7 @@ class ОкноБлокировкиПользователя(Screen):
         self.кнопка_сохранить.bind(on_press=self.сохранить_изменения)
         layout.add_widget(self.кнопка_сохранить)
         self.кнопка_заблокировать = Button(
-            text='Заблокировать',
+            text='Удалить пользователя',
             size_hint=(None, None),
             size=(250, 40),
             pos_hint={'x': 0.15, 'center_y': 0.6},
@@ -1367,6 +1446,7 @@ class ОкноБлокировкиПользователя(Screen):
         layout.add_widget(self.кнопка_заблокировать)
         self.add_widget(background)
         self.add_widget(layout)
+
     def on_enter(self):
         app = App.get_running_app()
         if not hasattr(app, 'целевой_пользователь'):
@@ -1381,6 +1461,7 @@ class ОкноБлокировкиПользователя(Screen):
         self.роль.text = целевой['role']
         self.обновить_видимость_элементов()
         self.загрузить_фото_пользователя()
+
     def загрузить_фото_пользователя(self):
         app = App.get_running_app()
         if not hasattr(app, 'целевой_пользователь'):
@@ -1393,8 +1474,7 @@ class ОкноБлокировкиПользователя(Screen):
             if not conn:
                 return
             cur = conn.cursor()
-            cur.execute("SELECT prof_pic_link FROM users WHERE id_user = %s",
-                        (целевой['id'],))
+            cur.execute("SELECT prof_pic_link FROM users WHERE id_user = %s", (целевой['id'],))
             результат = cur.fetchone()
             cur.close()
             conn.close()
@@ -1405,6 +1485,7 @@ class ОкноБлокировкиПользователя(Screen):
                 self.изображение_фото.source = ''
         except Exception as e:
             print(f"Ошибка загрузки фото пользователя: {e}")
+
     def обновить_видимость_элементов(self):
         app = App.get_running_app()
         целевой = app.целевой_пользователь
@@ -1421,6 +1502,7 @@ class ОкноБлокировкиПользователя(Screen):
         else:
             self.роль.disabled = False
             self.кнопка_заблокировать.disabled = False
+
     def сохранить_изменения(self, instance):
         app = App.get_running_app()
         целевой = app.целевой_пользователь
@@ -1440,11 +1522,12 @@ class ОкноБлокировкиПользователя(Screen):
         except Exception as e:
             popup = Popup(title='Ошибка', content=Label(text=str(e)), size_hint=(0.6, 0.4))
             popup.open()
+
     def заблокировать_пользователя(self, instance):
         app = App.get_running_app()
         целевой = app.целевой_пользователь
         if целевой['role'] == 'admin':
-            popup = Popup(title='Ошибка', content=Label(text='Нельзя заблокировать администратора'),size_hint=(0.6, 0.4))
+            popup = Popup(title='Ошибка', content=Label(text='Нельзя заблокировать администратора'), size_hint=(0.6, 0.4))
             popup.open()
             return
         try:
@@ -1460,14 +1543,19 @@ class ОкноБлокировкиПользователя(Screen):
         except Exception as e:
             popup = Popup(title='Ошибка', content=Label(text=str(e)), size_hint=(0.6, 0.4))
             popup.open()
+
     def перейти_к_поиску(self, instance):
         pass
+
     def вернуться_к_подбору(self, instance):
         self.manager.current = 'main_menu'
+
     def показать_статистику(self, instance):
         self.manager.current = 'статистика'
+
     def показать_профиль(self, instance):
         pass
+
 class ОкноДобавленияФильма(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1650,85 +1738,96 @@ class ОкноДобавленияФильма(Screen):
         self.btn_clear_act.bind(on_press=self.очистить_актеров)
         box_выбор_акт.add_widget(self.btn_clear_act)
         layout.add_widget(box_выбор_акт)
-
-        # Метка "Добавлено" для актёров
         self.метка_добавлено_актеры = Label(
             text='Добавлено: ',
-            size_hint=(None, None), size=(400, 30),
+            size_hint=(None, None),
+            size=(400, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.63},
-            font_size=16, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
-            halign='left', text_size=(380, None)
+            font_size=16,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
+            halign='left',
+            text_size=(380, None)
         )
         layout.add_widget(self.метка_добавлено_актеры)
-
-        # --- ЖАНРЫ ---
         layout.add_widget(Label(
             text='Жанры:',
-            size_hint=(None, None), size=(200, 30),
+            size_hint=(None, None),
+            size=(200, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.59},
-            font_size=20, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         ))
-
         box_выбор_жанр = BoxLayout(
             size_hint=(None, None),
             size=(400, 40),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.55})
         self.спиннер_жанры = Spinner(
-            text='Выберите жанр', values=[],
-            size_hint=(0.7, None), height=40,
-            font_size=16, background_color=(0, 0, 0, 0),
+            text='Выберите жанр',
+            values=[],
+            size_hint=(0.7, None),
+            height=40,
+            font_size=16,
+            background_color=(0, 0, 0, 0),
             font_name="couriercyrps_bold.ttf",
             color=(0, 0, 0, 1)
         )
         box_выбор_жанр.add_widget(self.спиннер_жанры)
-
         self.btn_add_genre = Button(
-            text='+', size_hint=(0.1, None), height=40,
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1), font_size=24,
+            text='+',
+            size_hint=(0.1, None),
+            height=40,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=24,
             size=(100, 40)
         )
         self.btn_add_genre.bind(on_press=self.добавить_жанр)
         box_выбор_жанр.add_widget(self.btn_add_genre)
-
         self.btn_clear_genre = Button(
-            text='Очистить всех', size_hint=(0.2, None), height=40,
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1), font_size=14
+            text='Очистить всех',
+            size_hint=(0.2, None),
+            height=40,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=14
         )
         self.btn_clear_genre.bind(on_press=self.очистить_жанры)
         box_выбор_жанр.add_widget(self.btn_clear_genre)
         layout.add_widget(box_выбор_жанр)
-
-        # Метка "Добавлено" для жанров
         self.метка_добавлено_жанры = Label(
             text='Добавлено: ',
-            size_hint=(None, None), size=(400, 30),
+            size_hint=(None, None),
+            size=(400, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.51},
-            font_size=16, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
-            halign='left', text_size=(380, None)
+            font_size=16,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
+            halign='left',
+            text_size=(380, None)
         )
         layout.add_widget(self.метка_добавлено_жанры)
-
-        # Кнопка "Сохранить фильм"
         кнопка_сохранить = Button(
-            text='Сохранить фильм', size_hint=(None, None), size=(300, 50),
-            pos_hint={'center_x': 0.27, 'center_y': 0.53}, font_size=20,
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
+            text='Сохранить фильм',
+            size_hint=(None, None),
+            size=(300, 50),
+            pos_hint={'center_x': 0.27, 'center_y': 0.53},
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
             font_name="couriercyrps_bold.ttf"
         )
         кнопка_сохранить.bind(on_press=self.сохранить_фильм)
         layout.add_widget(кнопка_сохранить)
-
         self.add_widget(background)
         self.add_widget(layout)
-
-        # Хранилища для выбранных элементов
         self.выбранные_режиссеры = []
         self.выбранные_актеры = []
         self.выбранные_жанры = []
         self.ссылка_обложки = ''
 
     def on_enter(self):
-        # Загружаем данные при входе на экран
         self.загрузить_данные_из_бд()
 
     def загрузить_данные_из_бд(self):
@@ -1736,67 +1835,48 @@ class ОкноДобавленияФильма(Screen):
             conn = подключиться_к_бд()
             if not conn:
                 return
-
             cur = conn.cursor()
-
-            # Загружаем режиссёров
             cur.execute("SELECT id_director, first_name, second_name FROM directors ORDER BY first_name, second_name")
             режиссеры = cur.fetchall()
             значения_режиссеров = ['Выберите режиссёра']
-
             for id_dir, имя, фамилия in режиссеры:
                 полное_имя = f"{имя} {фамилия}".strip()
                 значения_режиссеров.append(полное_имя)
             self.спиннер_режиссеры.values = значения_режиссеров
-
-            # Загружаем актёров
             cur.execute("SELECT id_actor, first_name, second_name FROM actors ORDER BY first_name, second_name")
             актеры = cur.fetchall()
             значения_актеров = ['Выберите актёра']
-
             for id_act, имя, фамилия in актеры:
                 полное_имя = f"{имя} {фамилия}".strip()
                 значения_актеров.append(полное_имя)
             self.спиннер_актеры.values = значения_актеров
-
-            # Загружаем жанры
             cur.execute("SELECT id_genre, name_ru FROM genres WHERE name_ru IS NOT NULL ORDER BY name_ru")
             жанры = cur.fetchall()
             значения_жанров = ['Выберите жанр']
-
             for id_genre, название in жанры:
                 значения_жанров.append(название)
             self.спиннер_жанры.values = значения_жанров
-
-            # Загружаем возрастные рейтинги из таблицы movies
             cur.execute("SELECT DISTINCT age_rating FROM movies WHERE age_rating IS NOT NULL ORDER BY age_rating")
             рейтинги = cur.fetchall()
             значения_рейтингов = ['Выберите возрастной рейтинг']
-
             for row in рейтинги:
-                if row[0]:  # Проверяем, что значение не None
+                if row[0]:
                     значения_рейтингов.append(row[0])
             self.спиннер_рейтинг.values = значения_рейтингов
-
-            # Загружаем настроения из таблицы movies
             cur.execute("SELECT DISTINCT mood FROM movies WHERE mood IS NOT NULL ORDER BY mood")
             настроения = cur.fetchall()
             значения_настроений = ['Выберите настроение']
-
             for row in настроения:
-                if row[0]:  # Проверяем, что значение не None
+                if row[0]:
                     значения_настроений.append(row[0])
             self.спиннер_настроение.values = значения_настроений
-
             cur.close()
             conn.close()
-
         except Exception as e:
             print(f"Ошибка загрузки данных из БД: {e}")
 
     def добавить_режиссера(self, instance):
         выбранный = self.спиннер_режиссеры.text
-
         if выбранный != 'Выберите режиссёра' and выбранный not in self.выбранные_режиссеры:
             self.выбранные_режиссеры.append(выбранный)
             self.обновить_метку_добавлено()
@@ -1804,7 +1884,6 @@ class ОкноДобавленияФильма(Screen):
 
     def добавить_актера(self, instance):
         выбранный = self.спиннер_актеры.text
-
         if выбранный != 'Выберите актёра' and выбранный not in self.выбранные_актеры:
             self.выбранные_актеры.append(выбранный)
             self.обновить_метку_добавлено()
@@ -1812,7 +1891,6 @@ class ОкноДобавленияФильма(Screen):
 
     def добавить_жанр(self, instance):
         выбранный = self.спиннер_жанры.text
-
         if выбранный != 'Выберите жанр' and выбранный not in self.выбранные_жанры:
             self.выбранные_жанры.append(выбранный)
             self.обновить_метку_добавлено()
@@ -1831,69 +1909,127 @@ class ОкноДобавленияФильма(Screen):
         self.обновить_метку_добавлено()
 
     def обновить_метку_добавлено(self):
-        # Обновляем метки для режиссёров
         if self.выбранные_режиссеры:
             self.метка_добавлено_режиссеры.text = f'Добавлено: {", ".join(self.выбранные_режиссеры[:3])}'
             if len(self.выбранные_режиссеры) > 3:
                 self.метка_добавлено_режиссеры.text += f'... (ещё {len(self.выбранные_режиссеры) - 3})'
         else:
             self.метка_добавлено_режиссеры.text = 'Добавлено: '
-
-        # Обновляем метки для актёров
         if self.выбранные_актеры:
             self.метка_добавлено_актеры.text = f'Добавлено: {", ".join(self.выбранные_актеры[:3])}'
             if len(self.выбранные_актеры) > 3:
                 self.метка_добавлено_актеры.text += f'... (ещё {len(self.выбранные_актеры) - 3})'
         else:
             self.метка_добавлено_актеры.text = 'Добавлено: '
-
-        # Обновляем метки для жанров
         if self.выбранные_жанры:
             self.метка_добавлено_жанры.text = f'Добавлено: {", ".join(self.выбранные_жанры)}'
         else:
             self.метка_добавлено_жанры.text = 'Добавлено: '
 
     def сохранить_фильм(self, instance):
-        # Собираем данные
         название = self.поле_название.text.strip()
         ориг_название = self.поле_ориг_название.text.strip()
-        длительность = self.поле_длительность.text.strip()
-        дата_выхода = self.поле_дата_выхода.text.strip()
-        рейтинг = self.спиннер_рейтинг.text if self.спиннер_рейтинг.text != 'Выберите возрастной рейтинг' else None
-        настроение = self.спиннер_настроение.text if self.спиннер_настроение.text != 'Выберите настроение' else None
+        длительность_текст = self.поле_длительность.text.strip()
+        дата_выхода_текст = self.поле_дата_выхода.text.strip()
+        рейтинг = self.спиннер_рейтинг.text
+        настроение = self.спиннер_настроение.text
 
-        # Проверяем обязательные поля с отладкой
         if not название:
             popup = Popup(title='Ошибка', content=Label(text='Введите название фильма'), size_hint=(0.6, 0.4))
             popup.open()
             return
 
         if not ориг_название:
-            ориг_название = название
+            popup = Popup(title='Ошибка', content=Label(text='Введите оригинальное название фильма'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
 
-        if not длительность:
-            popup = Popup(title='Ошибка', content=Label(text='Введите длительность'), size_hint=(0.6, 0.4))
+        if not длительность_текст:
+            popup = Popup(title='Ошибка', content=Label(text='Введите длительность фильма'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        if not длительность_текст.isdigit():
+            popup = Popup(title='Ошибка', content=Label(text='Длительность должна быть числом (только цифры)'), size_hint=(0.6, 0.4))
             popup.open()
             return
 
         try:
-            длительность_int = int(длительность)
+            длительность = int(длительность_текст)
+            if длительность <= 0:
+                popup = Popup(title='Ошибка', content=Label(text='Длительность должна быть положительным числом'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            if длительность > 1000:
+                popup = Popup(title='Ошибка', content=Label(text='Длительность не может превышать 1000 минут'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
         except ValueError:
-            popup = Popup(title='Ошибка', content=Label(text='Длительность должна быть числом'), size_hint=(0.6, 0.4))
+            popup = Popup(title='Ошибка', content=Label(text='Некорректное значение длительности'), size_hint=(0.6, 0.4))
             popup.open()
             return
 
-        # Проверяем дату
-        if дата_выхода:
-            try:
-                datetime.strptime(дата_выхода, '%Y-%m-%d')
-            except ValueError:
-                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты (ГГГГ-ММ-ДД)'),
-                              size_hint=(0.6, 0.4))
+        if not дата_выхода_текст:
+            popup = Popup(title='Ошибка', content=Label(text='Введите дату выхода фильма'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        if len(дата_выхода_текст) != 10 or дата_выхода_текст[4] != '-' or дата_выхода_текст[7] != '-':
+            popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты. Используйте ГГГГ-ММ-ДД'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        try:
+            parts = дата_выхода_текст.split('-')
+            if len(parts) != 3:
+                raise ValueError
+            год, месяц, день = parts
+            if not год.isdigit() or not месяц.isdigit() or not день.isdigit():
+                popup = Popup(title='Ошибка', content=Label(text='Дата должна содержать только цифры и дефисы'), size_hint=(0.6, 0.4))
                 popup.open()
                 return
-        else:
-            дата_выхода = None
+            год_int = int(год)
+            месяц_int = int(месяц)
+            день_int = int(день)
+            if год_int < 1888:
+                popup = Popup(title='Ошибка', content=Label(text='Год должен быть не ранее 1888'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            if год_int > datetime.now().year + 10:
+                popup = Popup(title='Ошибка', content=Label(text='Год не может быть более чем на 10 лет в будущем'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            if месяц_int < 1 or месяц_int > 12:
+                popup = Popup(title='Ошибка', content=Label(text='Месяц должен быть от 1 до 12'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            if день_int < 1 or день_int > 31:
+                popup = Popup(title='Ошибка', content=Label(text='День должен быть от 1 до 31'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            дата_выхода = datetime.strptime(дата_выхода_текст, '%Y-%m-%d')
+            if дата_выхода > datetime.now():
+                popup = Popup(title='Ошибка', content=Label(text='Дата выхода не может быть в будущем'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            if дата_выхода < datetime(1888, 1, 1):
+                popup = Popup(title='Ошибка', content=Label(text='Дата не может быть ранее 1888 года'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+        except ValueError as e:
+            popup = Popup(title='Ошибка', content=Label(text=f'Неверная дата: {str(e)}'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        if рейтинг == 'Выберите возрастной рейтинг':
+            popup = Popup(title='Ошибка', content=Label(text='Выберите возрастной рейтинг'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        if настроение == 'Выберите настроение':
+            popup = Popup(title='Ошибка', content=Label(text='Выберите настроение фильма'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
 
         try:
             conn = подключиться_к_бд()
@@ -1903,16 +2039,14 @@ class ОкноДобавленияФильма(Screen):
                 return
 
             cur = conn.cursor()
-
-            # 1. Вставляем основной фильм
             cur.execute("""
                 INSERT INTO movies (rus_title, orig_title, length, release_date, age_rating, mood, poster_url)
                 VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id_movie
             """, (
                 название,
                 ориг_название,
-                длительность_int,
-                дата_выхода,
+                длительность,
+                дата_выхода_текст,
                 рейтинг,
                 настроение,
                 self.ссылка_обложки if self.ссылка_обложки else None
@@ -1920,22 +2054,14 @@ class ОкноДобавленияФильма(Screen):
 
             id_фильма = cur.fetchone()[0]
 
-            # 2. Добавляем режиссёров
             for полное_имя_режиссера in self.выбранные_режиссеры:
-                # Разделяем имя на части
                 parts = полное_имя_режиссера.split()
-
                 if len(parts) == 1:
-                    # Только имя (без фамилии)
-                    cur.execute("SELECT id_director FROM directors WHERE first_name = %s",
-                                (parts[0],))
+                    cur.execute("SELECT id_director FROM directors WHERE first_name = %s", (parts[0],))
                 elif len(parts) == 2:
-                    # Имя и фамилия
                     cur.execute("SELECT id_director FROM directors WHERE first_name = %s AND second_name = %s",
                                 (parts[0], parts[1]))
                 else:
-                    # Имя и фамилия (возможно с отчеством или двойная фамилия)
-                    # Берем первую часть как имя, остальное как фамилию
                     имя = parts[0]
                     фамилия = ' '.join(parts[1:])
                     cur.execute("SELECT id_director FROM directors WHERE first_name = %s AND second_name = %s",
@@ -1947,22 +2073,14 @@ class ОкноДобавленияФильма(Screen):
                     cur.execute("INSERT INTO directing (id_movie, id_director) VALUES (%s, %s)",
                                 (id_фильма, id_режиссера))
 
-            # 3. Добавляем актёров
             for полное_имя_актера in self.выбранные_актеры:
-                # Разделяем имя на части
                 parts = полное_имя_актера.split()
-
                 if len(parts) == 1:
-                    # Только имя (без фамилии)
-                    cur.execute("SELECT id_actor FROM actors WHERE first_name = %s",
-                                (parts[0],))
+                    cur.execute("SELECT id_actor FROM actors WHERE first_name = %s", (parts[0],))
                 elif len(parts) == 2:
-                    # Имя и фамилия
                     cur.execute("SELECT id_actor FROM actors WHERE first_name = %s AND second_name = %s",
                                 (parts[0], parts[1]))
                 else:
-                    # Имя и фамилия (возможно с отчеством или двойная фамилия)
-                    # Берем первую часть как имя, остальное как фамилию
                     имя = parts[0]
                     фамилия = ' '.join(parts[1:])
                     cur.execute("SELECT id_actor FROM actors WHERE first_name = %s AND second_name = %s",
@@ -1974,7 +2092,6 @@ class ОкноДобавленияФильма(Screen):
                     cur.execute("INSERT INTO acting (id_movie, id_actor) VALUES (%s, %s)",
                                 (id_фильма, id_актера))
 
-            # 4. Добавляем жанры
             for название_жанра in self.выбранные_жанры:
                 cur.execute("SELECT id_genre FROM genres WHERE name_ru = %s", (название_жанра,))
                 результат = cur.fetchone()
@@ -1987,29 +2104,26 @@ class ОкноДобавленияФильма(Screen):
             cur.close()
             conn.close()
 
-            # Показываем успешное сообщение
-            текст = f"Фильм '{название}' успешно добавлен в базу данных!\nID фильма: {id_фильма}"
+            текст = f"Фильм '{название}' успешно добавлен!\nID: {id_фильма}\n."
             popup = Popup(
                 title='Успех',
-                content=Label(text=текст, font_size=18, font_name="couriercyrps_bold.ttf"),
+                content=Label(text=текст, font_size=16),
                 size_hint=(0.6, 0.4)
             )
             popup.open()
 
-            # Очищаем поля после успешного добавления
             self.очистить_форму()
 
         except Exception as e:
             print(f"Ошибка сохранения фильма: {e}")
             popup = Popup(
-                title='Ошибка',
-                content=Label(text=f'Ошибка при сохранении: {str(e)}', font_size=16),
+                title='Ошибка БД',
+                content=Label(text=f'Ошибка при сохранении в БД: {str(e)}', font_size=14),
                 size_hint=(0.6, 0.4)
             )
             popup.open()
 
     def очистить_форму(self):
-        """Очищает все поля формы"""
         self.поле_название.text = ''
         self.поле_ориг_название.text = ''
         self.поле_длительность.text = ''
@@ -2028,10 +2142,7 @@ class ОкноДобавленияФильма(Screen):
         self.спиннер_жанры.text = 'Выберите жанр'
 
     def добавить_обложку(self, instance):
-        """Открывает всплывающее окно для добавления ссылки на обложку"""
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
-
-        # Предустановленные варианты
         предустановки = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
 
         def использовать_стандартное():
@@ -2047,8 +2158,6 @@ class ОкноДобавленияФильма(Screen):
         предустановки.add_widget(btn_стандартное)
 
         content.add_widget(предустановки)
-
-        # Поле для ввода своей ссылки
         поле_ссылки = TextInput(
             hint_text='Или введите прямую ссылку на изображение (jpg, png)',
             size_hint_y=None,
@@ -2064,18 +2173,14 @@ class ОкноДобавленияФильма(Screen):
         def сохранить_ссылочную_обложку(instance):
             ссылка = поле_ссылки.text.strip()
             if ссылка:
-                # Проверяем URL на наличие кириллицы
                 try:
-                    # Пробуем закодировать как ASCII
                     ссылка.encode('ascii')
-                    # Если нет ошибки, значит URL ASCII-совместим
                     self.ссылка_обложки = ссылка
                     self.изображение_обложки.source = ссылка
                     self.кнопка_обложки.opacity = 0.3
                     popup.dismiss()
                     self.показать_сообщение('Обложка добавлена')
                 except UnicodeEncodeError:
-                    # URL содержит не-ASCII символы
                     self.показать_сообщение('Используйте ссылки только на английском языке')
             else:
                 self.показать_сообщение('Введите ссылку')
@@ -2095,7 +2200,6 @@ class ОкноДобавленияФильма(Screen):
         popup.open()
 
     def показать_сообщение(self, текст):
-        """Показывает всплывающее сообщение"""
         popup = Popup(
             title='Сообщение',
             content=Label(text=текст),
@@ -2117,7 +2221,6 @@ class ОкноДобавленияФильма(Screen):
     def показать_профиль(self, instance):
         self.manager.current = 'профиль'
 
-
 class ОкноДобавленияАктёра(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -2125,8 +2228,6 @@ class ОкноДобавленияАктёра(Screen):
         layout = FloatLayout()
         панель_навигации = создать_панель_навигации(self)
         layout.add_widget(панель_навигации)
-
-        # Асинхронное изображение для фото
         self.изображение_фото = AsyncImage(
             source='',
             size_hint=(None, None),
@@ -2137,8 +2238,6 @@ class ОкноДобавленияАктёра(Screen):
             color=(1, 1, 1, 0.9)
         )
         layout.add_widget(self.изображение_фото)
-
-        # Кнопка поверх изображения для добавления фото
         self.кнопка_фото = Button(
             text='Добавить фото',
             size_hint=(None, None),
@@ -2150,13 +2249,11 @@ class ОкноДобавленияАктёра(Screen):
         )
         self.кнопка_фото.bind(on_press=self.добавить_фото)
         layout.add_widget(self.кнопка_фото)
-
         левая_колонка_x = 0.2
         текстовые_поля = [
             ("Введите имя", 0.83),
             ("Введите фамилию", 0.78),
             ("Введите дату рождения (ГГГГ-ММ-ДД)", 0.7)
-
         ]
 
         for hint, y in текстовые_поля:
@@ -2204,35 +2301,52 @@ class ОкноДобавленияАктёра(Screen):
         )
         layout.add_widget(self.поле_дата_смерти)
 
-        # Фильмы
         layout.add_widget(Label(
             text='Фильмы:',
-            size_hint=(None, None), size=(200, 30),
+            size_hint=(None, None),
+            size=(200, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.79},
-            font_size=20, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         ))
 
-        box_выбор_фильмов = BoxLayout(size_hint=(None, None), size=(400, 40),
-                                      pos_hint={'x': правая_колонка_x, 'center_y': 0.76})
+        box_выбор_фильмов = BoxLayout(
+            size_hint=(None, None),
+            size=(750, 40),
+            pos_hint={'x': правая_колонка_x, 'center_y': 0.76}
+        )
 
         self.спиннер_фильмы = Spinner(
-            text='Выберите фильм', values=[],
-            size_hint=(0.7, None), height=40,
-            font_size=16, background_color=(0, 0, 0, 0),
-            color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            text='Выберите фильм',
+            values=[],
+            size_hint=(0.7, None),
+            height=40,
+            font_size=16,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         box_выбор_фильмов.add_widget(self.спиннер_фильмы)
 
         self.btn_add_mov = Button(
-            text='+', size_hint=(0.1, None), height=40,
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1), font_size=24
+            text='+',
+            size_hint=(0.1, None),
+            height=40,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=24
         )
         self.btn_add_mov.bind(on_press=self.добавить_фильм)
         box_выбор_фильмов.add_widget(self.btn_add_mov)
 
         self.btn_clear_mov = Button(
-            text='Очистить всех', size_hint=(0.2, None), height=40,
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1), font_size=14
+            text='Очистить всех',
+            size_hint=(0.2, None),
+            height=40,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=14
         )
         self.btn_clear_mov.bind(on_press=self.очистить_фильмы)
         box_выбор_фильмов.add_widget(self.btn_clear_mov)
@@ -2240,18 +2354,25 @@ class ОкноДобавленияАктёра(Screen):
 
         self.метка_добавлено_фильмы = Label(
             text='Добавлено: ',
-            size_hint=(None, None), size=(400, 30),
+            size_hint=(None, None),
+            size=(400, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.73},
-            font_size=16, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
-            halign='left', text_size=(380, None)
+            font_size=16,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
+            halign='left',
+            text_size=(380, None)
         )
         layout.add_widget(self.метка_добавлено_фильмы)
 
-        # Кнопка сохранения актера
         кнопка_сохранить = Button(
-            text='Добавить актёра', size_hint=(None, None), size=(300, 50),
-            pos_hint={'center_x': 0.25, 'center_y': 0.63}, font_size=20,
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
+            text='Добавить актёра',
+            size_hint=(None, None),
+            size=(300, 50),
+            pos_hint={'center_x': 0.25, 'center_y': 0.63},
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
             font_name="couriercyrps_bold.ttf"
         )
         кнопка_сохранить.bind(on_press=self.сохранить_актера)
@@ -2260,12 +2381,10 @@ class ОкноДобавленияАктёра(Screen):
         self.add_widget(background)
         self.add_widget(layout)
 
-        # Хранилище для выбранных фильмов
         self.выбранные_фильмы = []
         self.ссылка_фото = ''
 
     def on_enter(self):
-        # Загружаем данные при входе на экран
         self.загрузить_данные_из_бд()
 
     def загрузить_данные_из_бд(self):
@@ -2275,8 +2394,6 @@ class ОкноДобавленияАктёра(Screen):
                 return
 
             cur = conn.cursor()
-
-            # Загружаем фильмы
             cur.execute("SELECT id_movie, rus_title FROM movies WHERE rus_title IS NOT NULL ORDER BY rus_title")
             фильмы = cur.fetchall()
             значения_фильмов = ['Выберите фильм']
@@ -2304,7 +2421,6 @@ class ОкноДобавленияАктёра(Screen):
         self.обновить_метку_добавлено()
 
     def обновить_метку_добавлено(self):
-        # Обновляем метку для фильмов
         if self.выбранные_фильмы:
             self.метка_добавлено_фильмы.text = f'Добавлено: {", ".join(self.выбранные_фильмы[:3])}'
             if len(self.выбранные_фильмы) > 3:
@@ -2313,63 +2429,116 @@ class ОкноДобавленияАктёра(Screen):
             self.метка_добавлено_фильмы.text = 'Добавлено: '
 
     def сохранить_актера(self, instance):
-        # Собираем данные
         имя = self.поле_имя.text.strip()
         фамилия = self.поле_фамилия.text.strip()
-        дата_рождения = self.поле_дата_рождения.text.strip()
-        дата_смерти = self.поле_дата_смерти.text.strip()
+        дата_рождения_текст = self.поле_дата_рождения.text.strip()
+        дата_смерти_текст = self.поле_дата_смерти.text.strip()
         страна = self.поле_ввода_страны.text.strip()
-
-        # Проверяем обязательные поля
         if not имя:
             popup = Popup(title='Ошибка', content=Label(text='Введите имя актёра'), size_hint=(0.6, 0.4))
             popup.open()
             return
-
-        # Проверяем формат даты рождения
-        if дата_рождения:
-            try:
-                дата_рождения_obj = datetime.strptime(дата_рождения, '%Y-%m-%d').date()
-                сегодня = datetime.now().date()
-                if дата_рождения_obj > сегодня:
-                    popup = Popup(title='Ошибка', content=Label(text='Дата рождения не может быть в будущем'),
-                                  size_hint=(0.6, 0.4))
-                    popup.open()
-                    return
-            except ValueError:
-                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты рождения (ГГГГ-ММ-ДД)'),
-                              size_hint=(0.6, 0.4))
+        if not фамилия:
+            popup = Popup(title='Ошибка', content=Label(text='Введите фамилию актёра'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        if not дата_рождения_текст:
+            popup = Popup(title='Ошибка', content=Label(text='Введите дату рождения'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        if len(дата_рождения_текст) != 10 or дата_рождения_текст[4] != '-' or дата_рождения_текст[7] != '-':
+            popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты рождения. Используйте ГГГГ-ММ-ДД'),size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        parts = дата_рождения_текст.split('-')
+        if len(parts) != 3:
+            popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты рождения. Используйте ГГГГ-ММ-ДД'),size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        год, месяц, день = parts
+        if not (год.isdigit() and месяц.isdigit() and день.isdigit()):
+            popup = Popup(title='Ошибка', content=Label(text='Дата рождения должна содержать только цифры'),size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        try:
+            дата_рождения = datetime.strptime(дата_рождения_текст, '%Y-%m-%d').date()
+            сегодня = datetime.now().date()
+            if дата_рождения > сегодня:
+                popup = Popup(title='Ошибка', content=Label(text='Дата рождения не может быть в будущем'),size_hint=(0.6, 0.4))
                 popup.open()
                 return
-        else:
-            дата_рождения = None
+            if дата_рождения.year < 1800:
+                popup = Popup(title='Ошибка', content=Label(text='Год рождения не может быть ранее 1800'),size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            if дата_рождения.year > datetime.now().year:
+                popup = Popup(title='Ошибка', content=Label(text='Год рождения не может быть в будущем'),size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            if дата_рождения.month < 1 or дата_рождения.month > 12:
+                popup = Popup(title='Ошибка', content=Label(text='Месяц должен быть от 1 до 12'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
 
-        # Проверяем формат даты смерти (если указана)
-        if дата_смерти:
+            if дата_рождения.day < 1 or дата_рождения.day > 31:
+                popup = Popup(title='Ошибка', content=Label(text='День должен быть от 1 до 31'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+
+        except ValueError as e:
+            popup = Popup(title='Ошибка', content=Label(text=f'Неверная дата рождения: {str(e)}'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        дата_смерти = None
+        if дата_смерти_текст:
+            if len(дата_смерти_текст) != 10 or дата_смерти_текст[4] != '-' or дата_смерти_текст[7] != '-':
+                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты смерти. Используйте ГГГГ-ММ-ДД'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            parts = дата_смерти_текст.split('-')
+            if len(parts) != 3:
+                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты смерти. Используйте ГГГГ-ММ-ДД'),size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            год_см, месяц_см, день_см = parts
+            if not (год_см.isdigit() and месяц_см.isdigit() and день_см.isdigit()):
+                popup = Popup(title='Ошибка', content=Label(text='Дата смерти должна содержать только цифры'),size_hint=(0.6, 0.4))
+                popup.open()
+                return
             try:
-                дата_смерти_obj = datetime.strptime(дата_смерти, '%Y-%m-%d').date()
+                дата_смерти = datetime.strptime(дата_смерти_текст, '%Y-%m-%d').date()
                 сегодня = datetime.now().date()
-                if дата_смерти_obj > сегодня:
-                    popup = Popup(title='Ошибка', content=Label(text='Дата смерти не может быть в будущем'),
-                                  size_hint=(0.6, 0.4))
+
+                if дата_смерти > сегодня:
+                    popup = Popup(title='Ошибка', content=Label(text='Дата смерти не может быть в будущем'),size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_смерти < дата_рождения:
+                    popup = Popup(title='Ошибка', content=Label(text='Дата смерти не может быть раньше даты рождения'),size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_смерти.year < 1800:
+                    popup = Popup(title='Ошибка', content=Label(text='Год смерти не может быть ранее 1800'),size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_смерти.month < 1 or дата_смерти.month > 12:
+                    popup = Popup(title='Ошибка', content=Label(text='Месяц должен быть от 1 до 12'),size_hint=(0.6, 0.4))
                     popup.open()
                     return
 
-                if дата_рождения:
-                    дата_рождения_obj = datetime.strptime(дата_рождения, '%Y-%m-%d').date()
-                    if дата_смерти_obj < дата_рождения_obj:
-                        popup = Popup(title='Ошибка',
-                                      content=Label(text='Дата смерти не может быть раньше даты рождения'),
-                                      size_hint=(0.6, 0.4))
-                        popup.open()
-                        return
-            except ValueError:
-                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты смерти (ГГГГ-ММ-ДД)'),
-                              size_hint=(0.6, 0.4))
+                if дата_смерти.day < 1 or дата_смерти.day > 31:
+                    popup = Popup(title='Ошибка', content=Label(text='День должен быть от 1 до 31'),size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+            except ValueError as e:
+                popup = Popup(title='Ошибка', content=Label(text=f'Неверная дата смерти: {str(e)}'),size_hint=(0.6, 0.4))
                 popup.open()
                 return
-        else:
-            дата_смерти = None
+        if not страна:
+            popup = Popup(title='Ошибка', content=Label(text='Введите страну'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
 
         try:
             conn = подключиться_к_бд()
@@ -2380,24 +2549,21 @@ class ОкноДобавленияАктёра(Screen):
 
             cur = conn.cursor()
 
-            # 1. Вставляем актера в БД
             cur.execute("""
                 INSERT INTO actors (first_name, second_name, date_birth, date_death, actor_country, actor_photo)
                 VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_actor
             """, (
                 имя,
-                фамилия if фамилия else None,
-                дата_рождения,
-                дата_смерти,
-                страна if страна else None,
+                фамилия,
+                дата_рождения_текст,
+                дата_смерти_текст if дата_смерти_текст else None,
+                страна,
                 self.ссылка_фото if self.ссылка_фото else None
             ))
 
             id_актера = cur.fetchone()[0]
 
-            # 2. Добавляем связь с фильмами (если выбраны)
             for название_фильма in self.выбранные_фильмы:
-                # Ищем ID фильма по названию
                 cur.execute("SELECT id_movie FROM movies WHERE rus_title = %s", (название_фильма,))
                 результат = cur.fetchone()
 
@@ -2410,8 +2576,7 @@ class ОкноДобавленияАктёра(Screen):
             cur.close()
             conn.close()
 
-            # Показываем успешное сообщение
-            полное_имя = f"{имя} {фамилия}" if фамилия else имя
+            полное_имя = f"{имя} {фамилия}"
             текст = f"Актёр '{полное_имя}' успешно добавлен в базу данных!\nID актёра: {id_актера}"
             popup = Popup(
                 title='Успех',
@@ -2420,7 +2585,6 @@ class ОкноДобавленияАктёра(Screen):
             )
             popup.open()
 
-            # Очищаем поля после успешного добавления
             self.очистить_форму()
 
         except Exception as e:
@@ -2433,7 +2597,6 @@ class ОкноДобавленияАктёра(Screen):
             popup.open()
 
     def очистить_форму(self):
-        """Очищает все поля формы"""
         self.поле_имя.text = ''
         self.поле_фамилия.text = ''
         self.поле_дата_рождения.text = ''
@@ -2447,10 +2610,7 @@ class ОкноДобавленияАктёра(Screen):
         self.спиннер_фильмы.text = 'Выберите фильм'
 
     def добавить_фото(self, instance):
-        """Открывает всплывающее окно для добавления ссылки на фото"""
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
-
-        # Предустановленные варианты
         предустановки = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
 
         def использовать_стандартное():
@@ -2466,8 +2626,6 @@ class ОкноДобавленияАктёра(Screen):
         предустановки.add_widget(btn_стандартное)
 
         content.add_widget(предустановки)
-
-        # Поле для ввода своей ссылки
         поле_ссылки = TextInput(
             hint_text='Или введите прямую ссылку на изображение (jpg, png)',
             size_hint_y=None,
@@ -2483,18 +2641,14 @@ class ОкноДобавленияАктёра(Screen):
         def сохранить_ссылочное_фото(instance):
             ссылка = поле_ссылки.text.strip()
             if ссылка:
-                # Проверяем URL на наличие кириллицы
                 try:
-                    # Пробуем закодировать как ASCII
                     ссылка.encode('ascii')
-                    # Если нет ошибки, значит URL ASCII-совместим
                     self.ссылка_фото = ссылка
                     self.изображение_фото.source = ссылка
                     self.кнопка_фото.opacity = 0.3
                     popup.dismiss()
                     self.показать_сообщение('Фото добавлено')
                 except UnicodeEncodeError:
-                    # URL содержит не-ASCII символы
                     self.показать_сообщение('Используйте ссылки только на английском языке')
             else:
                 self.показать_сообщение('Введите ссылку')
@@ -2514,7 +2668,6 @@ class ОкноДобавленияАктёра(Screen):
         popup.open()
 
     def показать_сообщение(self, текст):
-        """Показывает всплывающее сообщение"""
         popup = Popup(
             title='Сообщение',
             content=Label(text=текст),
@@ -2536,7 +2689,6 @@ class ОкноДобавленияАктёра(Screen):
     def показать_профиль(self, instance):
         self.manager.current = 'профиль'
 
-
 class ОкноДобавленияРежиссёра(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -2544,8 +2696,6 @@ class ОкноДобавленияРежиссёра(Screen):
         layout = FloatLayout()
         панель_навигации = создать_панель_навигации(self)
         layout.add_widget(панель_навигации)
-
-        # Асинхронное изображение для фото
         self.изображение_фото = AsyncImage(
             source='',
             size_hint=(None, None),
@@ -2556,8 +2706,6 @@ class ОкноДобавленияРежиссёра(Screen):
             color=(1, 1, 1, 0.9)
         )
         layout.add_widget(self.изображение_фото)
-
-        # Кнопка поверх изображения для добавления фото
         self.кнопка_фото = Button(
             text='Добавить фото',
             size_hint=(None, None),
@@ -2569,13 +2717,11 @@ class ОкноДобавленияРежиссёра(Screen):
         )
         self.кнопка_фото.bind(on_press=self.добавить_фото)
         layout.add_widget(self.кнопка_фото)
-
         левая_колонка_x = 0.2
         текстовые_поля = [
             ("Введите имя", 0.83),
             ("Введите фамилию", 0.78),
             ("Введите дату рождения (ГГГГ-ММ-ДД)", 0.7)
-
         ]
 
         for hint, y in текстовые_поля:
@@ -2623,35 +2769,52 @@ class ОкноДобавленияРежиссёра(Screen):
         )
         layout.add_widget(self.поле_дата_смерти)
 
-        # Фильмы
         layout.add_widget(Label(
             text='Фильмы:',
-            size_hint=(None, None), size=(200, 30),
+            size_hint=(None, None),
+            size=(400, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.79},
-            font_size=20, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         ))
 
-        box_выбор_фильмов = BoxLayout(size_hint=(None, None), size=(400, 40),
-                                      pos_hint={'x': правая_колонка_x, 'center_y': 0.76})
+        box_выбор_фильмов = BoxLayout(
+            size_hint=(None, None),
+            size=(750, 40),
+            pos_hint={'x': правая_колонка_x, 'center_y': 0.76}
+        )
 
         self.спиннер_фильмы = Spinner(
-            text='Выберите фильм', values=[],
-            size_hint=(0.7, None), height=40,
-            font_size=16, background_color=(0, 0, 0, 0),
-            color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            text='Выберите фильм',
+            values=[],
+            size_hint=(0.7, None),
+            height=40,
+            font_size=16,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         box_выбор_фильмов.add_widget(self.спиннер_фильмы)
 
         self.btn_add_mov = Button(
-            text='+', size_hint=(0.1, None), height=40,
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1), font_size=24
+            text='+',
+            size_hint=(0.1, None),
+            height=40,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=24
         )
         self.btn_add_mov.bind(on_press=self.добавить_фильм)
         box_выбор_фильмов.add_widget(self.btn_add_mov)
 
         self.btn_clear_mov = Button(
-            text='Очистить всех', size_hint=(0.2, None), height=40,
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1), font_size=14
+            text='Очистить всех',
+            size_hint=(0.2, None),
+            height=40,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=14
         )
         self.btn_clear_mov.bind(on_press=self.очистить_фильмы)
         box_выбор_фильмов.add_widget(self.btn_clear_mov)
@@ -2659,18 +2822,25 @@ class ОкноДобавленияРежиссёра(Screen):
 
         self.метка_добавлено_фильмы = Label(
             text='Добавлено: ',
-            size_hint=(None, None), size=(400, 30),
+            size_hint=(None, None),
+            size=(400, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.73},
-            font_size=16, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
-            halign='left', text_size=(380, None)
+            font_size=16,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
+            halign='left',
+            text_size=(380, None)
         )
         layout.add_widget(self.метка_добавлено_фильмы)
 
-        # Кнопка сохранения режиссёра
         кнопка_сохранить = Button(
-            text='Добавить режиссёра', size_hint=(None, None), size=(300, 50),
-            pos_hint={'center_x': 0.25, 'center_y': 0.63}, font_size=20,
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
+            text='Добавить режиссёра',
+            size_hint=(None, None),
+            size=(300, 50),
+            pos_hint={'center_x': 0.25, 'center_y': 0.63},
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
             font_name="couriercyrps_bold.ttf"
         )
         кнопка_сохранить.bind(on_press=self.сохранить_режиссера)
@@ -2679,12 +2849,10 @@ class ОкноДобавленияРежиссёра(Screen):
         self.add_widget(background)
         self.add_widget(layout)
 
-        # Хранилище для выбранных фильмов
         self.выбранные_фильмы = []
         self.ссылка_фото = ''
 
     def on_enter(self):
-        # Загружаем данные при входе на экран
         self.загрузить_данные_из_бд()
 
     def загрузить_данные_из_бд(self):
@@ -2694,8 +2862,6 @@ class ОкноДобавленияРежиссёра(Screen):
                 return
 
             cur = conn.cursor()
-
-            # Загружаем фильмы
             cur.execute("SELECT id_movie, rus_title FROM movies WHERE rus_title IS NOT NULL ORDER BY rus_title")
             фильмы = cur.fetchall()
             значения_фильмов = ['Выберите фильм']
@@ -2723,7 +2889,6 @@ class ОкноДобавленияРежиссёра(Screen):
         self.обновить_метку_добавлено()
 
     def обновить_метку_добавлено(self):
-        # Обновляем метку для фильмов
         if self.выбранные_фильмы:
             self.метка_добавлено_фильмы.text = f'Добавлено: {", ".join(self.выбранные_фильмы[:3])}'
             if len(self.выбранные_фильмы) > 3:
@@ -2732,63 +2897,134 @@ class ОкноДобавленияРежиссёра(Screen):
             self.метка_добавлено_фильмы.text = 'Добавлено: '
 
     def сохранить_режиссера(self, instance):
-        # Собираем данные
         имя = self.поле_имя.text.strip()
         фамилия = self.поле_фамилия.text.strip()
-        дата_рождения = self.поле_дата_рождения.text.strip()
-        дата_смерти = self.поле_дата_смерти.text.strip()
+        дата_рождения_текст = self.поле_дата_рождения.text.strip()
+        дата_смерти_текст = self.поле_дата_смерти.text.strip()
         страна = self.поле_ввода_страны.text.strip()
 
-        # Проверяем обязательные поля
         if not имя:
             popup = Popup(title='Ошибка', content=Label(text='Введите имя режиссёра'), size_hint=(0.6, 0.4))
             popup.open()
             return
-
-        # Проверяем формат даты рождения
-        if дата_рождения:
-            try:
-                дата_рождения_obj = datetime.strptime(дата_рождения, '%Y-%m-%d').date()
-                сегодня = datetime.now().date()
-                if дата_рождения_obj > сегодня:
-                    popup = Popup(title='Ошибка', content=Label(text='Дата рождения не может быть в будущем'),
-                                  size_hint=(0.6, 0.4))
-                    popup.open()
-                    return
-            except ValueError:
-                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты рождения (ГГГГ-ММ-ДД)'),
+        if not фамилия:
+            popup = Popup(title='Ошибка', content=Label(text='Введите фамилию режиссёра'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        if not дата_рождения_текст:
+            popup = Popup(title='Ошибка', content=Label(text='Введите дату рождения'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        if len(дата_рождения_текст) != 10 or дата_рождения_текст[4] != '-' or дата_рождения_текст[7] != '-':
+            popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты рождения. Используйте ГГГГ-ММ-ДД'),
+                          size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        parts = дата_рождения_текст.split('-')
+        if len(parts) != 3:
+            popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты рождения. Используйте ГГГГ-ММ-ДД'),
+                          size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        год, месяц, день = parts
+        if not (год.isdigit() and месяц.isdigit() and день.isdigit()):
+            popup = Popup(title='Ошибка', content=Label(text='Дата рождения должна содержать только цифры'),
+                          size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        try:
+            дата_рождения = datetime.strptime(дата_рождения_текст, '%Y-%m-%d').date()
+            сегодня = datetime.now().date()
+            if дата_рождения > сегодня:
+                popup = Popup(title='Ошибка', content=Label(text='Дата рождения не может быть в будущем'),
                               size_hint=(0.6, 0.4))
                 popup.open()
                 return
-        else:
-            дата_рождения = None
+            if дата_рождения.year < 1800:
+                popup = Popup(title='Ошибка', content=Label(text='Год рождения не может быть ранее 1800'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            if дата_рождения.year > datetime.now().year:
+                popup = Popup(title='Ошибка', content=Label(text='Год рождения не может быть в будущем'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            if дата_рождения.month < 1 or дата_рождения.month > 12:
+                popup = Popup(title='Ошибка', content=Label(text='Месяц должен быть от 1 до 12'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
 
-        # Проверяем формат даты смерти (если указана)
-        if дата_смерти:
+            if дата_рождения.day < 1 or дата_рождения.day > 31:
+                popup = Popup(title='Ошибка', content=Label(text='День должен быть от 1 до 31'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+
+        except ValueError as e:
+            popup = Popup(title='Ошибка', content=Label(text=f'Неверная дата рождения: {str(e)}'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        дата_смерти = None
+        if дата_смерти_текст:
+            if len(дата_смерти_текст) != 10 or дата_смерти_текст[4] != '-' or дата_смерти_текст[7] != '-':
+                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты смерти. Используйте ГГГГ-ММ-ДД'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            parts = дата_смерти_текст.split('-')
+            if len(parts) != 3:
+                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты смерти. Используйте ГГГГ-ММ-ДД'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            год_см, месяц_см, день_см = parts
+            if not (год_см.isdigit() and месяц_см.isdigit() and день_см.isdigit()):
+                popup = Popup(title='Ошибка', content=Label(text='Дата смерти должна содержать только цифры'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
             try:
-                дата_смерти_obj = datetime.strptime(дата_смерти, '%Y-%m-%d').date()
+                дата_смерти = datetime.strptime(дата_смерти_текст, '%Y-%m-%d').date()
                 сегодня = datetime.now().date()
-                if дата_смерти_obj > сегодня:
+
+                if дата_смерти > сегодня:
                     popup = Popup(title='Ошибка', content=Label(text='Дата смерти не может быть в будущем'),
                                   size_hint=(0.6, 0.4))
                     popup.open()
                     return
+                if дата_смерти < дата_рождения:
+                    popup = Popup(title='Ошибка', content=Label(text='Дата смерти не может быть раньше даты рождения'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_смерти.year < 1800:
+                    popup = Popup(title='Ошибка', content=Label(text='Год смерти не может быть ранее 1800'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_смерти.month < 1 or дата_смерти.month > 12:
+                    popup = Popup(title='Ошибка', content=Label(text='Месяц должен быть от 1 до 12'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
 
-                if дата_рождения:
-                    дата_рождения_obj = datetime.strptime(дата_рождения, '%Y-%m-%d').date()
-                    if дата_смерти_obj < дата_рождения_obj:
-                        popup = Popup(title='Ошибка',
-                                      content=Label(text='Дата смерти не может быть раньше даты рождения'),
-                                      size_hint=(0.6, 0.4))
-                        popup.open()
-                        return
-            except ValueError:
-                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты смерти (ГГГГ-ММ-ДД)'),
+                if дата_смерти.day < 1 or дата_смерти.day > 31:
+                    popup = Popup(title='Ошибка', content=Label(text='День должен быть от 1 до 31'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+            except ValueError as e:
+                popup = Popup(title='Ошибка', content=Label(text=f'Неверная дата смерти: {str(e)}'),
                               size_hint=(0.6, 0.4))
                 popup.open()
                 return
-        else:
-            дата_смерти = None
+
+        if not страна:
+            popup = Popup(title='Ошибка', content=Label(text='Введите страну'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
 
         try:
             conn = подключиться_к_бд()
@@ -2799,39 +3035,35 @@ class ОкноДобавленияРежиссёра(Screen):
 
             cur = conn.cursor()
 
-            # 1. Вставляем режиссёра в БД
             cur.execute("""
                 INSERT INTO directors (first_name, second_name, date_birth, date_death, director_country, director_photo)
                 VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_director
             """, (
                 имя,
-                фамилия if фамилия else None,
-                дата_рождения,
-                дата_смерти,
-                страна if страна else None,
+                фамилия,
+                дата_рождения_текст,
+                дата_смерти_текст if дата_смерти_текст else None,
+                страна,
                 self.ссылка_фото if self.ссылка_фото else None
             ))
 
-            id_режиссёра = cur.fetchone()[0]
+            id_режиссера = cur.fetchone()[0]
 
-            # 2. Добавляем связь с фильмами (если выбраны)
             for название_фильма in self.выбранные_фильмы:
-                # Ищем ID фильма по названию
                 cur.execute("SELECT id_movie FROM movies WHERE rus_title = %s", (название_фильма,))
                 результат = cur.fetchone()
 
                 if результат:
                     id_фильма = результат[0]
                     cur.execute("INSERT INTO directing (id_movie, id_director) VALUES (%s, %s)",
-                                (id_фильма, id_режиссёра))
+                                (id_фильма, id_режиссера))
 
             conn.commit()
             cur.close()
             conn.close()
 
-            # Показываем успешное сообщение
-            полное_имя = f"{имя} {фамилия}" if фамилия else имя
-            текст = f"Режиссёр '{полное_имя}' успешно добавлен в базу данных!\nID режиссёра: {id_режиссёра}"
+            полное_имя = f"{имя} {фамилия}"
+            текст = f"Режиссёр '{полное_имя}' успешно добавлен в базу данных!\nID режиссёра: {id_режиссера}"
             popup = Popup(
                 title='Успех',
                 content=Label(text=текст, font_size=18, font_name="couriercyrps_bold.ttf"),
@@ -2839,7 +3071,6 @@ class ОкноДобавленияРежиссёра(Screen):
             )
             popup.open()
 
-            # Очищаем поля после успешного добавления
             self.очистить_форму()
 
         except Exception as e:
@@ -2852,7 +3083,6 @@ class ОкноДобавленияРежиссёра(Screen):
             popup.open()
 
     def очистить_форму(self):
-        """Очищает все поля формы"""
         self.поле_имя.text = ''
         self.поле_фамилия.text = ''
         self.поле_дата_рождения.text = ''
@@ -2866,10 +3096,7 @@ class ОкноДобавленияРежиссёра(Screen):
         self.спиннер_фильмы.text = 'Выберите фильм'
 
     def добавить_фото(self, instance):
-        """Открывает всплывающее окно для добавления ссылки на фото"""
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
-
-        # Предустановленные варианты
         предустановки = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
 
         def использовать_стандартное():
@@ -2885,8 +3112,6 @@ class ОкноДобавленияРежиссёра(Screen):
         предустановки.add_widget(btn_стандартное)
 
         content.add_widget(предустановки)
-
-        # Поле для ввода своей ссылки
         поле_ссылки = TextInput(
             hint_text='Или введите прямую ссылку на изображение (jpg, png)',
             size_hint_y=None,
@@ -2902,18 +3127,14 @@ class ОкноДобавленияРежиссёра(Screen):
         def сохранить_ссылочное_фото(instance):
             ссылка = поле_ссылки.text.strip()
             if ссылка:
-                # Проверяем URL на наличие кириллицы
                 try:
-                    # Пробуем закодировать как ASCII
                     ссылка.encode('ascii')
-                    # Если нет ошибки, значит URL ASCII-совместим
                     self.ссылка_фото = ссылка
                     self.изображение_фото.source = ссылка
                     self.кнопка_фото.opacity = 0.3
                     popup.dismiss()
                     self.показать_сообщение('Фото добавлено')
                 except UnicodeEncodeError:
-                    # URL содержит не-ASCII символы
                     self.показать_сообщение('Используйте ссылки только на английском языке')
             else:
                 self.показать_сообщение('Введите ссылку')
@@ -2933,7 +3154,6 @@ class ОкноДобавленияРежиссёра(Screen):
         popup.open()
 
     def показать_сообщение(self, текст):
-        """Показывает всплывающее сообщение"""
         popup = Popup(
             title='Сообщение',
             content=Label(text=текст),
@@ -2955,7 +3175,6 @@ class ОкноДобавленияРежиссёра(Screen):
     def показать_профиль(self, instance):
         self.manager.current = 'профиль'
 
-
 class ОкноРедактированияСписка(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -2965,43 +3184,52 @@ class ОкноРедактированияСписка(Screen):
         layout.add_widget(панель_навигации)
         self.заголовок = Label(
             text='Загловок',
-            size_hint=(None, None), size=(400, 50),
+            size_hint=(None, None),
+            size=(400, 50),
             pos_hint={'center_x': 0.2, 'center_y': 0.75},
-            font_size=24, color=(0, 0, 0, 1),
+            font_size=24,
+            color=(0, 0, 0, 1),
             font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.заголовок)
         кнопка_сохранить = Button(
-            text='Сохранить', size_hint=(None, None), size=(200, 50),
+            text='Сохранить',
+            size_hint=(None, None),
+            size=(200, 50),
             pos_hint={'center_x': 0.2, 'center_y': 0.3},
-            color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
-            background_color=(0, 0, 0, 0), font_size=20
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
+            background_color=(0, 0, 0, 0),
+            font_size=20
         )
         кнопка_сохранить.bind(on_press=self.сохранить_изменения)
         layout.add_widget(кнопка_сохранить)
 
         метка_доступные = Label(
             text='Доступные элементы',
-            size_hint=(None, None), size=(400, 30),
+            size_hint=(None, None),
+            size=(400, 30),
             pos_hint={'center_x': 0.2, 'center_y': 0.65},
-            font_size=20, color=(0, 0, 0, 1),
+            font_size=20,
+            color=(0, 0, 0, 1),
             font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(метка_доступные)
 
-        # Область "Выбранные элементы"
         метка_выбранные = Label(
             text='Выбранные элементы',
-            size_hint=(None, None), size=(400, 30),
-            pos_hint={'center_x': 0.4, 'center_y': 0.65},
-            font_size=20, color=(0, 0, 0, 1),
+            size_hint=(None, None),
+            size=(400, 30),
+            pos_hint={'center_x': 0.6, 'center_y': 0.65},
+            font_size=20,
+            color=(0, 0, 0, 1),
             font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(метка_выбранные)
 
-        # Первый скроллбар с доступными элементами
         self.скролл_доступные = ScrollView(
-            size_hint=(None, None), size=(400, 200),
+            size_hint=(None, None),
+            size=(740, 200),
             pos_hint={'center_x': 0.2, 'center_y': 0.5}
         )
         self.грид_доступные = GridLayout(cols=1, size_hint_y=None, spacing=5)
@@ -3009,10 +3237,10 @@ class ОкноРедактированияСписка(Screen):
         self.скролл_доступные.add_widget(self.грид_доступные)
         layout.add_widget(self.скролл_доступные)
 
-        # Второй скроллбар с выбранными элементами
         self.скролл_выбранные = ScrollView(
-            size_hint=(None, None), size=(400, 200),
-            pos_hint={'center_x': 0.4, 'center_y': 0.5}
+            size_hint=(None, None),
+            size=(740, 200),
+            pos_hint={'center_x': 0.6, 'center_y': 0.5}
         )
         self.грид_выбранные = GridLayout(cols=1, size_hint_y=None, spacing=5)
         self.грид_выбранные.bind(minimum_height=self.грид_выбранные.setter('height'))
@@ -3037,40 +3265,49 @@ class ОкноРедактированияСписка(Screen):
             self.id_элемента = getattr(app, 'выбранный_актер_id', None)
         elif self.тип_сущности == 'режиссер':
             self.id_элемента = getattr(app, 'выбранный_режиссер_id', None)
-        else:
+        elif self.тип_сущности == 'фильм':
             self.id_элемента = getattr(app, 'выбранный_фильм_id', None)
-            self.тип_сущности = 'фильм'
 
         self.список_выбранных = []
 
-        if self.тип_сущности == 'актер':
+        if hasattr(app, 'текущие_выбранные_элементы') and self.тип_списка in app.текущие_выбранные_элементы:
+            selected_ids = app.текущие_выбранные_элементы[self.тип_списка]
+
+            for elem_id in selected_ids:
+                название = ''
+                if self.тип_списка == 'режиссёров':
+                    название = self.получить_имя_режиссера(elem_id)
+                elif self.тип_списка == 'актёров':
+                    название = self.получить_имя_актера(elem_id)
+                elif self.тип_списка == 'жанры':
+                    название = self.получить_название_жанра(elem_id)
+
+                if название:
+                    self.список_выбранных.append((elem_id, название))
+
+        elif self.тип_сущности == 'актер':
             профиль_актера = self.manager.get_screen('профиль_актера')
             if hasattr(профиль_актера, 'текущие_фильмы'):
                 for id_film in профиль_актера.текущие_фильмы:
                     название = self.получить_название_фильма(id_film)
                     self.список_выбранных.append((id_film, название))
-
         elif self.тип_сущности == 'режиссер':
             профиль_режиссера = self.manager.get_screen('профиль_режиссера')
             if hasattr(профиль_режиссера, 'текущие_фильмы'):
                 for id_film in профиль_режиссера.текущие_фильмы:
                     название = self.получить_название_фильма(id_film)
                     self.список_выбранных.append((id_film, название))
-
         elif self.тип_сущности == 'фильм':
             профиль_фильма = self.manager.get_screen('профиль_фильма')
-
-            if self.тип_списка == 'режиссёров' and hasattr(профиль_фильма, 'текущие_режиссеры'):
+            if hasattr(профиль_фильма, 'текущие_режиссеры') and self.тип_списка == 'режиссёров':
                 for id_dir in профиль_фильма.текущие_режиссеры:
                     название = self.получить_имя_режиссера(id_dir)
                     self.список_выбранных.append((id_dir, название))
-
-            elif self.тип_списка == 'актёров' and hasattr(профиль_фильма, 'текущие_актеры'):
+            elif hasattr(профиль_фильма, 'текущие_актеры') and self.тип_списка == 'актёров':
                 for id_act in профиль_фильма.текущие_актеры:
                     название = self.получить_имя_актера(id_act)
                     self.список_выбранных.append((id_act, название))
-
-            elif self.тип_списка == 'жанров' and hasattr(профиль_фильма, 'текущие_жанры'):
+            elif hasattr(профиль_фильма, 'текущие_жанры') and self.тип_списка == 'жанры':
                 for id_genre in профиль_фильма.текущие_жанры:
                     название = self.получить_название_жанра(id_genre)
                     self.список_выбранных.append((id_genre, название))
@@ -3085,7 +3322,7 @@ class ОкноРедактированияСписка(Screen):
             self.заголовок.text = 'Редактирование режиссёров фильма'
         elif self.тип_списка == 'актёров':
             self.заголовок.text = 'Редактирование актёров фильма'
-        elif self.тип_списка == 'жанров':
+        elif self.тип_списка == 'жанры':
             self.заголовок.text = 'Редактирование жанров фильма'
         else:
             self.заголовок.text = 'Редактирование'
@@ -3190,15 +3427,14 @@ class ОкноРедактированияСписка(Screen):
 
             elif self.тип_сущности == 'фильм':
                 if self.тип_списка == 'режиссёров':
-                    cur.execute(
-                        "SELECT id_director, first_name, second_name FROM directors ORDER BY first_name, second_name")
+                    cur.execute("SELECT id_director, first_name, second_name FROM directors ORDER BY first_name, second_name")
                     элементы = cur.fetchall()
                     self.список_доступных = [(id_elem, f"{имя} {фамилия}") for id_elem, имя, фамилия in элементы]
 
                 elif self.тип_списка == 'актёров':
                     cur.execute("SELECT id_actor, first_name, second_name FROM actors ORDER BY first_name, second_name")
                     элементы = cur.fetchall()
-                    self.список_доступных = [(id_elem, f"{имя} {фамилия}") for id_eлем, имя, фамилия in элементы]
+                    self.список_доступных = [(id_elem, f"{имя} {фамилия}") for id_elem, имя, фамилия in элементы]
 
                 elif self.тип_списка == 'жанры':
                     cur.execute("SELECT id_genre, name_ru FROM genres ORDER BY name_ru")
@@ -3227,19 +3463,24 @@ class ОкноРедактированияСписка(Screen):
             строка = FloatLayout(size_hint_y=None, height=40)
             lbl = Label(
                 text=название,
-                size_hint_y=None, height=40,
+                size_hint_y=None,
+                height=40,
                 pos_hint={'x': 0, 'center_y': 0.5},
-                font_size=16, color=(0, 0, 0, 1),
+                font_size=16,
+                color=(0, 0, 0, 1),
                 font_name="couriercyrps_bold.ttf"
             )
             строка.add_widget(lbl)
 
             btn_add = Button(
                 text='Добавить',
-                size_hint=(None, None), size=(100, 30),
+                size_hint=(None, None),
+                size=(100, 30),
                 pos_hint={'right': 1, 'center_y': 0.5},
-                background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
-                font_size=14, font_name="couriercyrps_bold.ttf"
+                background_color=(0, 0, 0, 0),
+                color=(0, 0, 0, 1),
+                font_size=14,
+                font_name="couriercyrps_bold.ttf"
             )
             btn_add.bind(on_press=lambda x, id=id_elem, name=название: self.добавить_в_выбранные(id, название))
             строка.add_widget(btn_add)
@@ -3253,19 +3494,24 @@ class ОкноРедактированияСписка(Screen):
             строка = FloatLayout(size_hint_y=None, height=40)
             lbl = Label(
                 text=название,
-                size_hint_y=None, height=40,
+                size_hint_y=None,
+                height=40,
                 pos_hint={'x': 0, 'center_y': 0.5},
-                font_size=16, color=(0, 0, 0, 1),
+                font_size=16,
+                color=(0, 0, 0, 1),
                 font_name="couriercyrps_bold.ttf"
             )
             строка.add_widget(lbl)
 
             btn_remove = Button(
                 text='Удалить',
-                size_hint=(None, None), size=(100, 30),
+                size_hint=(None, None),
+                size=(100, 30),
                 pos_hint={'right': 1, 'center_y': 0.5},
-                background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
-                font_size=14, font_name="couriercyrps_bold.ttf"
+                background_color=(0, 0, 0, 0),
+                color=(0, 0, 0, 1),
+                font_size=14,
+                font_name="couriercyrps_bold.ttf"
             )
             btn_remove.bind(on_press=lambda x, id=id_eлем: self.удалить_из_выбранных(id))
             строка.add_widget(btn_remove)
@@ -3319,16 +3565,32 @@ class ОкноРедактированияСписка(Screen):
                 for id_eлем, _ in self.список_выбранных:
                     cur.execute("INSERT INTO acting (id_movie, id_actor) VALUES (%s, %s)",
                                 (id_eлем, self.id_элемента))
+                conn.commit()
+                cur.close()
+                conn.close()
+
                 профиль_актера = self.manager.get_screen('профиль_актера')
                 профиль_актера.загрузить_данные_актера(self.id_элемента)
+
+                popup = Popup(title='Успех', content=Label(text='Изменения сохранены'), size_hint=(0.6, 0.4))
+                popup.open()
+                self.manager.current = 'профиль_актера'
 
             elif self.тип_сущности == 'режиссер':
                 cur.execute("DELETE FROM directing WHERE id_director = %s", (self.id_элемента,))
                 for id_eлем, _ in self.список_выбранных:
                     cur.execute("INSERT INTO directing (id_movie, id_director) VALUES (%s, %s)",
                                 (id_eлем, self.id_элемента))
+                conn.commit()
+                cur.close()
+                conn.close()
+
                 профиль_режиссера = self.manager.get_screen('профиль_режиссера')
                 профиль_режиссера.загрузить_данные_режиссера(self.id_элемента)
+
+                popup = Popup(title='Успех', content=Label(text='Изменения сохранены'), size_hint=(0.6, 0.4))
+                popup.open()
+                self.manager.current = 'профиль_режиссера'
 
             elif self.тип_сущности == 'фильм':
                 if self.тип_списка == 'режиссёров':
@@ -3349,21 +3611,15 @@ class ОкноРедактированияСписка(Screen):
                         cur.execute("INSERT INTO genre_movies (id_movie, id_genre) VALUES (%s, %s)",
                                     (self.id_элемента, id_eлем))
 
+                conn.commit()
+                cur.close()
+                conn.close()
+
                 профиль_фильма = self.manager.get_screen('профиль_фильма')
                 профиль_фильма.загрузить_данные_фильма(self.id_элемента)
 
-            conn.commit()
-            cur.close()
-            conn.close()
-
-            popup = Popup(title='Успех', content=Label(text='Изменения сохранены'), size_hint=(0.6, 0.4))
-            popup.open()
-
-            if self.тип_сущности == 'актер':
-                self.manager.current = 'профиль_актера'
-            elif self.тип_сущности == 'режиссер':
-                self.manager.current = 'профиль_режиссера'
-            elif self.тип_сущности == 'фильм':
+                popup = Popup(title='Успех', content=Label(text='Изменения сохранены'), size_hint=(0.6, 0.4))
+                popup.open()
                 self.manager.current = 'профиль_фильма'
 
         except Exception as e:
@@ -3371,24 +3627,19 @@ class ОкноРедактированияСписка(Screen):
             popup = Popup(title='Ошибка', content=Label(text=f'Ошибка при сохранении: {str(e)}'), size_hint=(0.6, 0.4))
             popup.open()
 
-
     def перейти_к_поиску(self, instance):
         тип_поиска = instance.text
         self.manager.get_screen('поиск').установить_режим_поиска(тип_поиска)
         self.manager.current = 'поиск'
 
-
     def вернуться_к_подбору(self, instance):
         self.manager.current = 'main_menu'
-
 
     def показать_статистику(self, instance):
         self.manager.current = 'статистика'
 
-
     def показать_профиль(self, instance):
         self.manager.current = 'профиль'
-
 
 class ОкноПрофиляФильма(Screen):
     def __init__(self, **kwargs):
@@ -3398,7 +3649,6 @@ class ОкноПрофиляФильма(Screen):
         панель_навигации = создать_панель_навигации(self)
         layout.add_widget(панель_навигации)
 
-        # Асинхронное изображение для обложки
         self.изображение_обложки = AsyncImage(
             source='',
             size_hint=(None, None),
@@ -3410,62 +3660,79 @@ class ОкноПрофиляФильма(Screen):
         )
         layout.add_widget(self.изображение_обложки)
 
-        # Кнопка редактирования обложки
         self.btn_edit_poster = Button(
             text='Редактировать обложку',
-            size_hint=(None, None), size=(200, 40),
-            pos_hint={'center_x': 0.12, 'center_y': 0.53},
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
-            font_size=16, font_name="couriercyrps_bold.ttf"
+            size_hint=(None, None),
+            size=(200, 40),
+            pos_hint={'center_x': 0.12, 'center_y': 0.48},
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=20,
+            font_name="couriercyrps_bold.ttf"
         )
         self.btn_edit_poster.bind(on_press=self.редактировать_обложку)
         layout.add_widget(self.btn_edit_poster)
 
         левая_колонка_x = 0.2
-        # Название
+
         self.поле_название = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.83},
             hint_text='Название фильма',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_название)
 
         self.поле_ориг_название = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.78},
             hint_text='Оригинальное название',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_ориг_название)
 
         self.поле_длительность = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.73},
             hint_text='Длительность (минуты)',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
             input_filter='int'
         )
         layout.add_widget(self.поле_длительность)
 
         self.поле_дата_выхода = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.68},
             hint_text='Дата выхода (ГГГГ-ММ-ДД)',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_дата_выхода)
 
         self.спиннер_рейтинг = Spinner(
             text='',
             values=[],
-            size_hint=(None, None), size=(200, 40),
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.63},
-            font_size=20, background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
             font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.спиннер_рейтинг)
@@ -3473,38 +3740,45 @@ class ОкноПрофиляФильма(Screen):
         self.спиннер_настроение = Spinner(
             text='',
             values=[],
-            size_hint=(None, None), size=(200, 40),
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.58},
-            font_size=20, background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
             font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.спиннер_настроение)
 
         правая_колонка_x = 0.55
 
-        # --- РЕЖИССЁРЫ ---
         layout.add_widget(Label(
             text='Режиссёры:',
-            size_hint=(None, None), size=(200, 30),
+            size_hint=(None, None),
+            size=(200, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.83},
-            font_size=20, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
+            font_size=20,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
             halign='left'
         ))
 
-        # Кнопка редактирования режиссёров
         self.btn_edit_dir = Button(
             text='Редактировать',
-            size_hint=(None, None), size=(200, 40),
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'x': 0.65, 'center_y': 0.83},
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
-            font_size=20, font_name="couriercyrps_bold.ttf"
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=20,
+            font_name="couriercyrps_bold.ttf"
         )
         self.btn_edit_dir.bind(on_press=lambda x: self.открыть_редактирование('режиссёров'))
         layout.add_widget(self.btn_edit_dir)
 
-        # Список режиссёров
         self.список_режиссеров = ScrollView(
-            size_hint=(None, None), size=(200, 100),
+            size_hint=(None, None),
+            size=(200, 100),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.76}
         )
         self.грид_режиссеры = GridLayout(cols=1, size_hint_y=None, spacing=5)
@@ -3512,29 +3786,33 @@ class ОкноПрофиляФильма(Screen):
         self.список_режиссеров.add_widget(self.грид_режиссеры)
         layout.add_widget(self.список_режиссеров)
 
-        # --- АКТЁРЫ ---
         layout.add_widget(Label(
             text='Актёры:',
-            size_hint=(None, None), size=(200, 30),
+            size_hint=(None, None),
+            size=(200, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.65},
-            font_size=20, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
+            font_size=20,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
             halign='left'
         ))
 
-        # Кнопка редактирования актёров
         self.btn_edit_act = Button(
             text='Редактировать',
-            size_hint=(None, None), size=(200, 40),
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'x': 0.65, 'center_y': 0.65},
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
-            font_size=20, font_name="couriercyrps_bold.ttf"
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=20,
+            font_name="couriercyrps_bold.ttf"
         )
         self.btn_edit_act.bind(on_press=lambda x: self.открыть_редактирование('актёров'))
         layout.add_widget(self.btn_edit_act)
 
-        # Список актёров
         self.список_актеров = ScrollView(
-            size_hint=(None, None), size=(200, 100),
+            size_hint=(None, None),
+            size=(200, 100),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.58}
         )
         self.грид_актеры = GridLayout(cols=1, size_hint_y=None, spacing=5)
@@ -3542,29 +3820,33 @@ class ОкноПрофиляФильма(Screen):
         self.список_актеров.add_widget(self.грид_актеры)
         layout.add_widget(self.список_актеров)
 
-        # --- ЖАНРЫ ---
         layout.add_widget(Label(
             text='Жанры:',
-            size_hint=(None, None), size=(200, 30),
+            size_hint=(None, None),
+            size=(200, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.47},
-            font_size=20, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
+            font_size=20,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
             halign='left'
         ))
 
-        # Кнопка редактирования жанров
         self.btn_edit_genre = Button(
             text='Редактировать',
-            size_hint=(None, None), size=(200, 40),
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'x': 0.65, 'center_y': 0.47},
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
-            font_size=20, font_name="couriercyrps_bold.ttf"
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=20,
+            font_name="couriercyrps_bold.ttf"
         )
         self.btn_edit_genre.bind(on_press=lambda x: self.открыть_редактирование('жанры'))
         layout.add_widget(self.btn_edit_genre)
 
-        # Список жанров
         self.список_жанров = ScrollView(
-            size_hint=(None, None), size=(200, 100),
+            size_hint=(None, None),
+            size=(200, 100),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.40}
         )
         self.грид_жанры = GridLayout(cols=1, size_hint_y=None, spacing=5)
@@ -3572,22 +3854,26 @@ class ОкноПрофиляФильма(Screen):
         self.список_жанров.add_widget(self.грид_жанры)
         layout.add_widget(self.список_жанров)
 
-        # Кнопка сохранения
         self.кнопка_сохранить = Button(
-            text='Сохранить', size_hint=(None, None), size=(200, 40),
+            text='Сохранить',
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'center_x': 0.25, 'center_y': 0.53},
-            color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
             background_color=(0, 0, 0, 0),
             font_size=20
         )
         self.кнопка_сохранить.bind(on_press=self.сохранить_изменения)
         layout.add_widget(self.кнопка_сохранить)
 
-        # Кнопка удаления
         self.кнопка_удалить = Button(
-            text='Удалить', size_hint=(None, None), size=(200, 40),
+            text='Удалить',
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'center_x': 0.25, 'center_y': 0.48},
-            color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
             background_color=(0, 0, 0, 0),
             font_size=20
         )
@@ -3597,7 +3883,6 @@ class ОкноПрофиляФильма(Screen):
         self.add_widget(background)
         self.add_widget(layout)
 
-        # Хранилища для данных
         self.текущие_режиссеры = []
         self.текущие_актеры = []
         self.текущие_жанры = []
@@ -3669,7 +3954,7 @@ class ОкноПрофиляФильма(Screen):
 
                 self.поле_название.text = название or ''
                 self.поле_ориг_название.text = ориг_название or ''
-                self.поле_длительность.text = str(длительность) if длительность else ''
+                self.поле_длительность.text = str(длительность)
                 self.поле_дата_выхода.text = str(дата_выхода) if дата_выхода else ''
 
                 self.загрузить_значения_спиннеров()
@@ -3783,9 +4068,106 @@ class ОкноПрофиляФильма(Screen):
             self.грид_жанры.add_widget(label)
 
     def сохранить_изменения(self, instance=None):
-        # Проверка обязательных полей
-        if not self.поле_название.text.strip():
+        название = self.поле_название.text.strip()
+        ориг_название = self.поле_ориг_название.text.strip()
+        длительность_текст = self.поле_длительность.text.strip()
+        дата_выхода_текст = self.поле_дата_выхода.text.strip()
+        рейтинг = self.спиннер_рейтинг.text
+        настроение = self.спиннер_настроение.text
+
+        if not название:
             popup = Popup(title='Ошибка', content=Label(text='Введите название фильма'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        if not ориг_название:
+            popup = Popup(title='Ошибка', content=Label(text='Введите оригинальное название фильма'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        if not длительность_текст:
+            popup = Popup(title='Ошибка', content=Label(text='Введите длительность фильма'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        if not длительность_текст.isdigit():
+            popup = Popup(title='Ошибка', content=Label(text='Длительность должна быть числом (только цифры)'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        try:
+            длительность = int(длительность_текст)
+            if длительность <= 0:
+                popup = Popup(title='Ошибка', content=Label(text='Длительность должна быть положительным числом'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+        except ValueError:
+            popup = Popup(title='Ошибка', content=Label(text='Некорректное значение длительности'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        if not дата_выхода_текст:
+            popup = Popup(title='Ошибка', content=Label(text='Введите дату выхода фильма'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        if len(дата_выхода_текст) != 10 or дата_выхода_текст[4] != '-' or дата_выхода_текст[7] != '-':
+            popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты. Используйте ГГГГ-ММ-ДД'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        try:
+            parts = дата_выхода_текст.split('-')
+            if len(parts) != 3:
+                raise ValueError("Неправильное количество частей в дате")
+
+            год, месяц, день = parts
+
+            if not год.isdigit() or not месяц.isdigit() or not день.isdigit():
+                popup = Popup(title='Ошибка', content=Label(text='Дата должна содержать только цифры и дефисы'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+
+            год_int = int(год)
+            месяц_int = int(месяц)
+            день_int = int(день)
+
+            if год_int < 1888:
+                popup = Popup(title='Ошибка', content=Label(text='Год должен быть не ранее 1888'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+
+            if месяц_int < 1 or месяц_int > 12:
+                popup = Popup(title='Ошибка', content=Label(text='Месяц должен быть от 1 до 12'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+
+            if день_int < 1 or день_int > 31:
+                popup = Popup(title='Ошибка', content=Label(text='День должен быть от 1 до 31'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+
+            дата_выхода = datetime.strptime(дата_выхода_текст, '%Y-%m-%d')
+
+            if дата_выхода > datetime.now():
+                popup = Popup(title='Ошибка', content=Label(text='Дата выхода не может быть в будущем'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+
+            if дата_выхода < datetime(1888, 1, 1):
+                popup = Popup(title='Ошибка', content=Label(text='Дата не может быть ранее 1888 года'), size_hint=(0.6, 0.4))
+                popup.open()
+                return
+
+        except ValueError as e:
+            popup = Popup(title='Ошибка', content=Label(text=f'Неверная дата: {str(e)}'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        if рейтинг == 'Выберите возрастной рейтинг':
+            popup = Popup(title='Ошибка', content=Label(text='Выберите возрастной рейтинг'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+
+        if настроение == 'Выберите настроение':
+            popup = Popup(title='Ошибка', content=Label(text='Выберите настроение фильма'), size_hint=(0.6, 0.4))
             popup.open()
             return
 
@@ -3800,32 +4182,31 @@ class ОкноПрофиляФильма(Screen):
 
             cur.execute("""
                 UPDATE movies 
-                SET rus_title = %s, orig_title = %s, length = %s, release_date = %s, 
-                    age_rating = %s, mood = %s
+                SET rus_title = %s, orig_title = %s, length = %s, release_date = %s, age_rating = %s, mood = %s
                 WHERE id_movie = %s
             """, (
-                self.поле_название.text.strip(),
-                self.поле_ориг_название.text.strip(),
-                int(self.поле_длительность.text) if self.поле_длительность.text else None,
-                self.поле_дата_выхода.text if self.поле_дата_выхода.text else None,
-                self.спиннер_рейтинг.text if self.спиннер_рейтинг.text != 'Выберите возрастной рейтинг' else None,
-                self.спиннер_настроение.text if self.спиннер_настроение.text != 'Выберите настроение' else None,
+                название,
+                ориг_название,
+                длительность,
+                дата_выхода_текст,
+                рейтинг,
+                настроение,
                 self.id_фильма
             ))
 
             conn.commit()
+            popup = Popup(title='Успех', content=Label(text=f'Изменения сохранены'), size_hint=(0.6, 0.4))
+            popup.open()
+
             cur.close()
             conn.close()
-
-            popup = Popup(title='Успех', content=Label(text='Изменения сохранены'), size_hint=(0.6, 0.4))
-            popup.open()
 
         except Exception as e:
             print(f"Ошибка сохранения изменений: {e}")
             popup = Popup(title='Ошибка', content=Label(text=f'Ошибка при сохранении: {str(e)}'), size_hint=(0.6, 0.4))
             popup.open()
 
-    def удалить_фильм(self):
+    def удалить_фильм(self, instance=None):
         if not self.id_фильма:
             return
 
@@ -3836,8 +4217,7 @@ class ОкноПрофиляФильма(Screen):
         btn_yes = Button(text='Да', size_hint=(0.5, None), height=40)
         btn_no = Button(text='Нет', size_hint=(0.5, None), height=40)
 
-        popup = Popup(title='Удаление фильма', content=content,
-                      size_hint=(0.6, 0.4))
+        popup = Popup(title='Удаление фильма', content=content, size_hint=(0.6, 0.4))
 
         def подтвердить_удаление(instance):
             try:
@@ -3889,10 +4269,8 @@ class ОкноПрофиляФильма(Screen):
         popup.open()
 
     def редактировать_обложку(self, instance):
-        """Открывает всплывающее окно для редактирования обложки фильма"""
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
-        # Предустановленные варианты
         предустановки = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
 
         def использовать_стандартное():
@@ -3907,7 +4285,6 @@ class ОкноПрофиляФильма(Screen):
 
         content.add_widget(предустановки)
 
-        # Поле для ввода своей ссылки
         поле_ссылки = TextInput(
             hint_text='Или введите прямую ссылку на изображение (jpg, png)',
             size_hint_y=None,
@@ -3923,16 +4300,12 @@ class ОкноПрофиляФильма(Screen):
         def сохранить_ссылочную_обложку(instance):
             ссылка = поле_ссылки.text.strip()
             if ссылка:
-                # Проверяем URL на наличие кириллицы
                 try:
-                    # Пробуем закодировать как ASCII
                     ссылка.encode('ascii')
-                    # Если нет ошибки, значит URL ASCII-совместим
                     self.обновить_обложку(ссылка)
                     popup.dismiss()
                     self.показать_сообщение('Обложка обновлена')
                 except UnicodeEncodeError:
-                    # URL содержит не-ASCII символы
                     self.показать_сообщение('Используйте ссылки только на английском языке')
             else:
                 self.показать_сообщение('Введите ссылку')
@@ -3952,7 +4325,6 @@ class ОкноПрофиляФильма(Screen):
         popup.open()
 
     def обновить_обложку(self, ссылка):
-        """Обновляет обложку фильма в БД"""
         try:
             conn = подключиться_к_бд()
             if not conn:
@@ -3969,7 +4341,6 @@ class ОкноПрофиляФильма(Screen):
             cur.close()
             conn.close()
 
-            # Обновляем изображение
             self.изображение_обложки.source = ссылка
             self.изображение_обложки.reload()
 
@@ -3978,7 +4349,6 @@ class ОкноПрофиляФильма(Screen):
             self.показать_сообщение(f'Ошибка: {str(e)}')
 
     def показать_сообщение(self, текст):
-        """Показывает всплывающее сообщение"""
         popup = Popup(
             title='Сообщение',
             content=Label(text=текст),
@@ -3990,6 +4360,13 @@ class ОкноПрофиляФильма(Screen):
         app = App.get_running_app()
         app.текущий_тип_редактирования = тип_списка
         app.текущий_тип_сущности = 'фильм'
+        self.manager.current = 'редактирование_списка'
+        app.текущие_выбранные_элементы = {
+            'режиссёров': self.текущие_режиссеры if hasattr(self, 'текущие_режиссеры') else [],
+            'актёров': self.текущие_актеры if hasattr(self, 'текущие_актеры') else [],
+            'жанры': self.текущие_жанры if hasattr(self, 'текущие_жанры') else []
+        }
+
         self.manager.current = 'редактирование_списка'
 
     def перейти_к_поиску(self, instance):
@@ -4005,7 +4382,6 @@ class ОкноПрофиляФильма(Screen):
     def показать_профиль(self, instance):
         self.manager.current = 'профиль'
 
-
 class ОкноПрофиляАктёра(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -4014,7 +4390,6 @@ class ОкноПрофиляАктёра(Screen):
         панель_навигации = создать_панель_навигации(self)
         layout.add_widget(панель_навигации)
 
-        # Асинхронное изображение для фото
         self.изображение_фото = AsyncImage(
             source='',
             size_hint=(None, None),
@@ -4026,13 +4401,15 @@ class ОкноПрофиляАктёра(Screen):
         )
         layout.add_widget(self.изображение_фото)
 
-        # Кнопка редактирования фото
         self.btn_edit_photo = Button(
             text='Редактировать фото',
-            size_hint=(None, None), size=(200, 40),
-            pos_hint={'center_x': 0.12, 'center_y': 0.53},
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
-            font_size=16, font_name="couriercyrps_bold.ttf"
+            size_hint=(None, None),
+            size=(200, 40),
+            pos_hint={'center_x': 0.12, 'center_y': 0.48},
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=20,
+            font_name="couriercyrps_bold.ttf"
         )
         self.btn_edit_photo.bind(on_press=self.редактировать_фото)
         layout.add_widget(self.btn_edit_photo)
@@ -4040,47 +4417,62 @@ class ОкноПрофиляАктёра(Screen):
         левая_колонка_x = 0.2
 
         self.поле_имя = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.83},
             hint_text='Имя',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_имя)
 
         self.поле_фамилия = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.78},
             hint_text='Фамилия',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_фамилия)
 
         self.поле_дата_рождения = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.73},
             hint_text='Дата рождения (ГГГГ-ММ-ДД)',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_дата_рождения)
 
         self.поле_дата_смерти = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.68},
             hint_text='Дата смерти (ГГГГ-ММ-ДД)',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_дата_смерти)
 
         self.поле_страна = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.63},
             hint_text='Страна',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_страна)
 
@@ -4088,24 +4480,31 @@ class ОкноПрофиляАктёра(Screen):
 
         layout.add_widget(Label(
             text='Фильмы:',
-            size_hint=(None, None), size=(200, 30),
+            size_hint=(None, None),
+            size=(200, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.83},
-            font_size=20, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
+            font_size=20,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
             halign='left'
         ))
 
         self.btn_edit_films = Button(
             text='Редактировать',
-            size_hint=(None, None), size=(200, 40),
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'x': 0.75, 'center_y': 0.83},
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
-            font_size=20, font_name="couriercyrps_bold.ttf"
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=20,
+            font_name="couriercyrps_bold.ttf"
         )
         self.btn_edit_films.bind(on_press=lambda x: self.открыть_редактирование('фильмы'))
         layout.add_widget(self.btn_edit_films)
 
         self.список_фильмов = ScrollView(
-            size_hint=(None, None), size=(300, 150),
+            size_hint=(None, None),
+            size=(300, 150),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.70}
         )
         self.грид_фильмы = GridLayout(cols=1, size_hint_y=None, spacing=5)
@@ -4114,19 +4513,27 @@ class ОкноПрофиляАктёра(Screen):
         layout.add_widget(self.список_фильмов)
 
         self.кнопка_сохранить = Button(
-            text='Сохранить', size_hint=(None, None), size=(200, 40),
+            text='Сохранить',
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'center_x': 0.25, 'center_y': 0.53},
-            color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
-            background_color=(0, 0, 0, 0), font_size=20
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
+            background_color=(0, 0, 0, 0),
+            font_size=20
         )
         self.кнопка_сохранить.bind(on_press=self.сохранить_изменения)
         layout.add_widget(self.кнопка_сохранить)
 
         self.кнопка_удалить = Button(
-            text='Удалить', size_hint=(None, None), size=(200, 40),
+            text='Удалить',
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'center_x': 0.25, 'center_y': 0.48},
-            color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
-            background_color=(0, 0, 0, 0), font_size=20
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
+            background_color=(0, 0, 0, 0),
+            font_size=20
         )
         self.кнопка_удалить.bind(on_press=self.удалить_актера)
         layout.add_widget(self.кнопка_удалить)
@@ -4229,11 +4636,139 @@ class ОкноПрофиляАктёра(Screen):
             self.грид_фильмы.add_widget(label)
 
     def сохранить_изменения(self, instance=None):
-        # Проверка обязательных полей
-        if not self.поле_имя.text.strip():
+        имя = self.поле_имя.text.strip()
+        фамилия = self.поле_фамилия.text.strip()
+        дата_рождения_текст = self.поле_дата_рождения.text.strip()
+        дата_смерти_текст = self.поле_дата_смерти.text.strip()
+        страна = self.поле_страна.text.strip()
+
+        if not имя:
             popup = Popup(title='Ошибка', content=Label(text='Введите имя актёра'), size_hint=(0.6, 0.4))
             popup.open()
             return
+        if not фамилия:
+            popup = Popup(title='Ошибка', content=Label(text='Введите фамилию актёра'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        if not дата_рождения_текст:
+            popup = Popup(title='Ошибка', content=Label(text='Введите дату рождения'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        if дата_рождения_текст:
+            if len(дата_рождения_текст) != 10 or дата_рождения_текст[4] != '-' or дата_рождения_текст[7] != '-':
+                popup = Popup(title='Ошибка',
+                              content=Label(text='Неверный формат даты рождения. Используйте ГГГГ-ММ-ДД'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            parts = дата_рождения_текст.split('-')
+            if len(parts) != 3:
+                popup = Popup(title='Ошибка',
+                              content=Label(text='Неверный формат даты рождения. Используйте ГГГГ-ММ-ДД'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            год, месяц, день = parts
+            if not (год.isdigit() and месяц.isdigit() and день.isdigit()):
+                popup = Popup(title='Ошибка', content=Label(text='Дата рождения должна содержать только цифры'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            try:
+                дата_рождения = datetime.strptime(дата_рождения_текст, '%Y-%m-%d').date()
+                сегодня = datetime.now().date()
+                if дата_рождения > сегодня:
+                    popup = Popup(title='Ошибка', content=Label(text='Дата рождения не может быть в будущем'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_рождения.year < 1800:
+                    popup = Popup(title='Ошибка', content=Label(text='Год рождения не может быть ранее 1800'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_рождения.year > datetime.now().year:
+                    popup = Popup(title='Ошибка', content=Label(text='Год рождения не может быть в будущем'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_рождения.month < 1 or дата_рождения.month > 12:
+                    popup = Popup(title='Ошибка', content=Label(text='Месяц должен быть от 1 до 12'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+                if дата_рождения.day < 1 or дата_рождения.day > 31:
+                    popup = Popup(title='Ошибка', content=Label(text='День должен быть от 1 до 31'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+            except ValueError as e:
+                popup = Popup(title='Ошибка', content=Label(text=f'Неверная дата рождения: {str(e)}'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+
+        if дата_смерти_текст:
+            if len(дата_смерти_текст) != 10 or дата_смерти_текст[4] != '-' or дата_смерти_текст[7] != '-':
+                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты смерти. Используйте ГГГГ-ММ-ДД'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            parts = дата_смерти_текст.split('-')
+            if len(parts) != 3:
+                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты смерти. Используйте ГГГГ-ММ-ДД'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            год_см, месяц_см, день_см = parts
+            if not (год_см.isdigit() and месяц_см.isdigit() and день_см.isdigit()):
+                popup = Popup(title='Ошибка', content=Label(text='Дата смерти должна содержать только цифры'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            try:
+                дата_смерти = datetime.strptime(дата_смерти_текст, '%Y-%m-%d').date()
+                сегодня = datetime.now().date()
+
+                if дата_смерти > сегодня:
+                    popup = Popup(title='Ошибка', content=Label(text='Дата смерти не может быть в будущем'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+                if дата_рождения_текст:
+                    дата_рождения = datetime.strptime(дата_рождения_текст, '%Y-%m-%d').date()
+                    if дата_смерти < дата_рождения:
+                        popup = Popup(title='Ошибка',
+                                      content=Label(text='Дата смерти не может быть раньше даты рождения'),
+                                      size_hint=(0.6, 0.4))
+                        popup.open()
+                        return
+
+                if дата_смерти.year < 1800:
+                    popup = Popup(title='Ошибка', content=Label(text='Год смерти не может быть ранее 1800'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_смерти.month < 1 or дата_смерти.month > 12:
+                    popup = Popup(title='Ошибка', content=Label(text='Месяц должен быть от 1 до 12'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+                if дата_смерти.day < 1 or дата_смерти.day > 31:
+                    popup = Popup(title='Ошибка', content=Label(text='День должен быть от 1 до 31'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+            except ValueError as e:
+                popup = Popup(title='Ошибка', content=Label(text=f'Неверная дата смерти: {str(e)}'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
 
         try:
             conn = подключиться_к_бд()
@@ -4246,15 +4781,18 @@ class ОкноПрофиляАктёра(Screen):
 
             cur.execute("""
                 UPDATE actors 
-                SET first_name = %s, second_name = %s, date_birth = %s, 
-                    date_death = %s, actor_country = %s
+                SET first_name = %s, 
+                    second_name = %s, 
+                    date_birth = %s, 
+                    date_death = %s, 
+                    actor_country = %s
                 WHERE id_actor = %s
             """, (
-                self.поле_имя.text.strip(),
-                self.поле_фамилия.text.strip() if self.поле_фамилия.text.strip() else None,
-                self.поле_дата_рождения.text if self.поле_дата_рождения.text else None,
-                self.поле_дата_смерти.text if self.поле_дата_смерти.text else None,
-                self.поле_страна.text.strip() if self.поле_страна.text.strip() else None,
+                имя,
+                фамилия,
+                дата_рождения_текст if дата_рождения_текст else None,
+                дата_смерти_текст if дата_смерти_текст else None,
+                страна if страна else None,
                 self.id_актера
             ))
 
@@ -4270,7 +4808,7 @@ class ОкноПрофиляАктёра(Screen):
             popup = Popup(title='Ошибка', content=Label(text=f'Ошибка при сохранении: {str(e)}'), size_hint=(0.6, 0.4))
             popup.open()
 
-    def удалить_актера(self):
+    def удалить_актера(self, instance=None):
         if not self.id_актера:
             return
 
@@ -4281,8 +4819,7 @@ class ОкноПрофиляАктёра(Screen):
         btn_yes = Button(text='Да', size_hint=(0.5, None), height=40)
         btn_no = Button(text='Нет', size_hint=(0.5, None), height=40)
 
-        popup = Popup(title='Удаление актёра', content=content,
-                      size_hint=(0.6, 0.4))
+        popup = Popup(title='Удаление актёра', content=content, size_hint=(0.6, 0.4))
 
         def подтвердить_удаление(instance):
             try:
@@ -4330,10 +4867,8 @@ class ОкноПрофиляАктёра(Screen):
         popup.open()
 
     def редактировать_фото(self, instance):
-        """Открывает всплывающее окно для редактирования фото актёра"""
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
-        # Предустановленные варианты
         предустановки = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
 
         def использовать_стандартное():
@@ -4348,7 +4883,6 @@ class ОкноПрофиляАктёра(Screen):
 
         content.add_widget(предустановки)
 
-        # Поле для ввода своей ссылки
         поле_ссылки = TextInput(
             hint_text='Или введите прямую ссылку на изображение (jpg, png)',
             size_hint_y=None,
@@ -4364,16 +4898,12 @@ class ОкноПрофиляАктёра(Screen):
         def сохранить_ссылочное_фото(instance):
             ссылка = поле_ссылки.text.strip()
             if ссылка:
-                # Проверяем URL на наличие кириллицы
                 try:
-                    # Пробуем закодировать как ASCII
                     ссылка.encode('ascii')
-                    # Если нет ошибки, значит URL ASCII-совместим
                     self.обновить_фото(ссылка)
                     popup.dismiss()
                     self.показать_сообщение('Фото обновлено')
                 except UnicodeEncodeError:
-                    # URL содержит не-ASCII символы
                     self.показать_сообщение('Используйте ссылки только на английском языке')
             else:
                 self.показать_сообщение('Введите ссылку')
@@ -4393,7 +4923,6 @@ class ОкноПрофиляАктёра(Screen):
         popup.open()
 
     def обновить_фото(self, ссылка):
-        """Обновляет фото актёра в БД"""
         try:
             conn = подключиться_к_бд()
             if not conn:
@@ -4410,7 +4939,6 @@ class ОкноПрофиляАктёра(Screen):
             cur.close()
             conn.close()
 
-            # Обновляем изображение
             self.изображение_фото.source = ссылка
             self.изображение_фото.reload()
 
@@ -4419,7 +4947,6 @@ class ОкноПрофиляАктёра(Screen):
             self.показать_сообщение(f'Ошибка: {str(e)}')
 
     def показать_сообщение(self, текст):
-        """Показывает всплывающее сообщение"""
         popup = Popup(
             title='Сообщение',
             content=Label(text=текст),
@@ -4447,7 +4974,6 @@ class ОкноПрофиляАктёра(Screen):
     def показать_профиль(self, instance):
         self.manager.current = 'профиль'
 
-
 class ОкноПрофиляРежиссёра(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -4456,7 +4982,6 @@ class ОкноПрофиляРежиссёра(Screen):
         панель_навигации = создать_панель_навигации(self)
         layout.add_widget(панель_навигации)
 
-        # Асинхронное изображение для фото
         self.изображение_фото = AsyncImage(
             source='',
             size_hint=(None, None),
@@ -4468,13 +4993,15 @@ class ОкноПрофиляРежиссёра(Screen):
         )
         layout.add_widget(self.изображение_фото)
 
-        # Кнопка редактирования фото
         self.btn_edit_photo = Button(
             text='Редактировать фото',
-            size_hint=(None, None), size=(200, 40),
-            pos_hint={'center_x': 0.12, 'center_y': 0.53},
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
-            font_size=16, font_name="couriercyrps_bold.ttf"
+            size_hint=(None, None),
+            size=(200, 40),
+            pos_hint={'center_x': 0.12, 'center_y': 0.48},
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=20,
+            font_name="couriercyrps_bold.ttf"
         )
         self.btn_edit_photo.bind(on_press=self.редактировать_фото)
         layout.add_widget(self.btn_edit_photo)
@@ -4482,47 +5009,62 @@ class ОкноПрофиляРежиссёра(Screen):
         левая_колонка_x = 0.2
 
         self.поле_имя = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.83},
             hint_text='Имя',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_имя)
 
         self.поле_фамилия = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.78},
             hint_text='Фамилия',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_фамилия)
 
         self.поле_дата_рождения = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.73},
             hint_text='Дата рождения (ГГГГ-ММ-ДД)',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_дата_рождения)
 
         self.поле_дата_смерти = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.68},
             hint_text='Дата смерти (ГГГГ-ММ-ДД)',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_дата_смерти)
 
         self.поле_страна = TextInput(
-            size_hint=(None, None), size=(300, 40),
+            size_hint=(None, None),
+            size=(300, 40),
             pos_hint={'x': левая_колонка_x, 'center_y': 0.63},
             hint_text='Страна',
-            font_size=20, background_color=(0, 0, 0, 0),
-            foreground_color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf"
+            font_size=20,
+            background_color=(0, 0, 0, 0),
+            foreground_color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf"
         )
         layout.add_widget(self.поле_страна)
 
@@ -4530,24 +5072,31 @@ class ОкноПрофиляРежиссёра(Screen):
 
         layout.add_widget(Label(
             text='Фильмы:',
-            size_hint=(None, None), size=(200, 30),
+            size_hint=(None, None),
+            size=(200, 30),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.83},
-            font_size=20, color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
+            font_size=20,
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
             halign='left'
         ))
 
         self.btn_edit_films = Button(
             text='Редактировать',
-            size_hint=(None, None), size=(200, 40),
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'x': 0.75, 'center_y': 0.83},
-            background_color=(0, 0, 0, 0), color=(0, 0, 0, 1),
-            font_size=20, font_name="couriercyrps_bold.ttf"
+            background_color=(0, 0, 0, 0),
+            color=(0, 0, 0, 1),
+            font_size=20,
+            font_name="couriercyrps_bold.ttf"
         )
         self.btn_edit_films.bind(on_press=lambda x: self.открыть_редактирование('фильмы'))
         layout.add_widget(self.btn_edit_films)
 
         self.список_фильмов = ScrollView(
-            size_hint=(None, None), size=(300, 150),
+            size_hint=(None, None),
+            size=(300, 150),
             pos_hint={'x': правая_колонка_x, 'center_y': 0.70}
         )
         self.грид_фильмы = GridLayout(cols=1, size_hint_y=None, spacing=5)
@@ -4556,19 +5105,27 @@ class ОкноПрофиляРежиссёра(Screen):
         layout.add_widget(self.список_фильмов)
 
         self.кнопка_сохранить = Button(
-            text='Сохранить', size_hint=(None, None), size=(200, 40),
+            text='Сохранить',
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'center_x': 0.25, 'center_y': 0.53},
-            color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
-            background_color=(0, 0, 0, 0), font_size=20
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
+            background_color=(0, 0, 0, 0),
+            font_size=20
         )
         self.кнопка_сохранить.bind(on_press=self.сохранить_изменения)
         layout.add_widget(self.кнопка_сохранить)
 
         self.кнопка_удалить = Button(
-            text='Удалить', size_hint=(None, None), size=(200, 40),
+            text='Удалить',
+            size_hint=(None, None),
+            size=(200, 40),
             pos_hint={'center_x': 0.25, 'center_y': 0.48},
-            color=(0, 0, 0, 1), font_name="couriercyrps_bold.ttf",
-            background_color=(0, 0, 0, 0), font_size=20
+            color=(0, 0, 0, 1),
+            font_name="couriercyrps_bold.ttf",
+            background_color=(0, 0, 0, 0),
+            font_size=20
         )
         self.кнопка_удалить.bind(on_press=self.удалить_режиссера)
         layout.add_widget(self.кнопка_удалить)
@@ -4598,8 +5155,7 @@ class ОкноПрофиляРежиссёра(Screen):
                 self.кнопка_удалить.opacity = 0
                 self.кнопка_удалить.disabled = True
             else:
-                for поле in [self.поле_имя, self.поле_фамилия, self.поле_дата_рождения,
-                             self.поле_дата_смерти, self.поле_страна]:
+                for поле in [self.поле_имя, self.поле_фамилия, self.поле_дата_рождения,self.поле_дата_смерти, self.поле_страна]:
                     поле.readonly = False
 
                 self.btn_edit_films.opacity = 1
@@ -4671,11 +5227,139 @@ class ОкноПрофиляРежиссёра(Screen):
             self.грид_фильмы.add_widget(label)
 
     def сохранить_изменения(self, instance=None):
-        # Проверка обязательных полей
-        if not self.поле_имя.text.strip():
+        имя = self.поле_имя.text.strip()
+        фамилия = self.поле_фамилия.text.strip()
+        дата_рождения_текст = self.поле_дата_рождения.text.strip()
+        дата_смерти_текст = self.поле_дата_смерти.text.strip()
+        страна = self.поле_страна.text.strip()
+
+        if not имя:
             popup = Popup(title='Ошибка', content=Label(text='Введите имя режиссёра'), size_hint=(0.6, 0.4))
             popup.open()
             return
+        if not фамилия:
+            popup = Popup(title='Ошибка', content=Label(text='Введите фамилию режиссёра'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        if not дата_рождения_текст:
+            popup = Popup(title='Ошибка', content=Label(text='Введите дату рождения'), size_hint=(0.6, 0.4))
+            popup.open()
+            return
+        if дата_рождения_текст:
+            if len(дата_рождения_текст) != 10 or дата_рождения_текст[4] != '-' or дата_рождения_текст[7] != '-':
+                popup = Popup(title='Ошибка',
+                              content=Label(text='Неверный формат даты рождения. Используйте ГГГГ-ММ-ДД'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            parts = дата_рождения_текст.split('-')
+            if len(parts) != 3:
+                popup = Popup(title='Ошибка',
+                              content=Label(text='Неверный формат даты рождения. Используйте ГГГГ-ММ-ДД'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            год, месяц, день = parts
+            if not (год.isdigit() and месяц.isdigit() and день.isdigit()):
+                popup = Popup(title='Ошибка', content=Label(text='Дата рождения должна содержать только цифры'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            try:
+                дата_рождения = datetime.strptime(дата_рождения_текст, '%Y-%m-%d').date()
+                сегодня = datetime.now().date()
+                if дата_рождения > сегодня:
+                    popup = Popup(title='Ошибка', content=Label(text='Дата рождения не может быть в будущем'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_рождения.year < 1800:
+                    popup = Popup(title='Ошибка', content=Label(text='Год рождения не может быть ранее 1800'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_рождения.year > datetime.now().year:
+                    popup = Popup(title='Ошибка', content=Label(text='Год рождения не может быть в будущем'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_рождения.month < 1 or дата_рождения.month > 12:
+                    popup = Popup(title='Ошибка', content=Label(text='Месяц должен быть от 1 до 12'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+                if дата_рождения.day < 1 or дата_рождения.day > 31:
+                    popup = Popup(title='Ошибка', content=Label(text='День должен быть от 1 до 31'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+            except ValueError as e:
+                popup = Popup(title='Ошибка', content=Label(text=f'Неверная дата рождения: {str(e)}'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+
+        if дата_смерти_текст:
+            if len(дата_смерти_текст) != 10 or дата_смерти_текст[4] != '-' or дата_смерти_текст[7] != '-':
+                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты смерти. Используйте ГГГГ-ММ-ДД'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            parts = дата_смерти_текст.split('-')
+            if len(parts) != 3:
+                popup = Popup(title='Ошибка', content=Label(text='Неверный формат даты смерти. Используйте ГГГГ-ММ-ДД'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            год_см, месяц_см, день_см = parts
+            if not (год_см.isdigit() and месяц_см.isdigit() and день_см.isdigit()):
+                popup = Popup(title='Ошибка', content=Label(text='Дата смерти должна содержать только цифры'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
+            try:
+                дата_смерти = datetime.strptime(дата_смерти_текст, '%Y-%m-%d').date()
+                сегодня = datetime.now().date()
+
+                if дата_смерти > сегодня:
+                    popup = Popup(title='Ошибка', content=Label(text='Дата смерти не может быть в будущем'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+                if дата_рождения_текст:
+                    дата_рождения = datetime.strptime(дата_рождения_текст, '%Y-%m-%d').date()
+                    if дата_смерти < дата_рождения:
+                        popup = Popup(title='Ошибка',
+                                      content=Label(text='Дата смерти не может быть раньше даты рождения'),
+                                      size_hint=(0.6, 0.4))
+                        popup.open()
+                        return
+
+                if дата_смерти.year < 1800:
+                    popup = Popup(title='Ошибка', content=Label(text='Год смерти не может быть ранее 1800'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+                if дата_смерти.month < 1 or дата_смерти.month > 12:
+                    popup = Popup(title='Ошибка', content=Label(text='Месяц должен быть от 1 до 12'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+                if дата_смерти.day < 1 or дата_смерти.day > 31:
+                    popup = Popup(title='Ошибка', content=Label(text='День должен быть от 1 до 31'),
+                                  size_hint=(0.6, 0.4))
+                    popup.open()
+                    return
+
+            except ValueError as e:
+                popup = Popup(title='Ошибка', content=Label(text=f'Неверная дата смерти: {str(e)}'),
+                              size_hint=(0.6, 0.4))
+                popup.open()
+                return
 
         try:
             conn = подключиться_к_бд()
@@ -4688,15 +5372,18 @@ class ОкноПрофиляРежиссёра(Screen):
 
             cur.execute("""
                 UPDATE directors 
-                SET first_name = %s, second_name = %s, date_birth = %s, 
-                    date_death = %s, director_country = %s
+                SET first_name = %s, 
+                    second_name = %s, 
+                    date_birth = %s, 
+                    date_death = %s, 
+                    director_country = %s
                 WHERE id_director = %s
             """, (
-                self.поле_имя.text.strip(),
-                self.поле_фамилия.text.strip() if self.поле_фамилия.text.strip() else None,
-                self.поле_дата_рождения.text if self.поле_дата_рождения.text else None,
-                self.поле_дата_смерти.text if self.поле_дата_смерти.text else None,
-                self.поле_страна.text.strip() if self.поле_страна.text.strip() else None,
+                имя,
+                фамилия,
+                дата_рождения_текст if дата_рождения_текст else None,
+                дата_смерти_текст if дата_смерти_текст else None,
+                страна if страна else None,
                 self.id_режиссера
             ))
 
@@ -4723,8 +5410,7 @@ class ОкноПрофиляРежиссёра(Screen):
         btn_yes = Button(text='Да', size_hint=(0.5, None), height=40)
         btn_no = Button(text='Нет', size_hint=(0.5, None), height=40)
 
-        popup = Popup(title='Удаление режиссёра', content=content,
-                      size_hint=(0.6, 0.4))
+        popup = Popup(title='Удаление режиссёра', content=content, size_hint=(0.6, 0.4))
 
         def подтвердить_удаление(instance):
             try:
@@ -4772,10 +5458,8 @@ class ОкноПрофиляРежиссёра(Screen):
         popup.open()
 
     def редактировать_фото(self, instance):
-        """Открывает всплывающее окно для редактирования фото режиссёра"""
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
-        # Предустановленные варианты
         предустановки = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
 
         def использовать_стандартное():
@@ -4790,7 +5474,6 @@ class ОкноПрофиляРежиссёра(Screen):
 
         content.add_widget(предустановки)
 
-        # Поле для ввода своей ссылки
         поле_ссылки = TextInput(
             hint_text='Или введите прямую ссылку на изображение (jpg, png)',
             size_hint_y=None,
@@ -4806,16 +5489,12 @@ class ОкноПрофиляРежиссёра(Screen):
         def сохранить_ссылочное_фото(instance):
             ссылка = поле_ссылки.text.strip()
             if ссылка:
-                # Проверяем URL на наличие кириллицы
                 try:
-                    # Пробуем закодировать как ASCII
                     ссылка.encode('ascii')
-                    # Если нет ошибки, значит URL ASCII-совместим
                     self.обновить_фото(ссылка)
                     popup.dismiss()
                     self.показать_сообщение('Фото обновлено')
                 except UnicodeEncodeError:
-                    # URL содержит не-ASCII символы
                     self.показать_сообщение('Используйте ссылки только на английском языке')
             else:
                 self.показать_сообщение('Введите ссылку')
@@ -4835,7 +5514,6 @@ class ОкноПрофиляРежиссёра(Screen):
         popup.open()
 
     def обновить_фото(self, ссылка):
-        """Обновляет фото режиссёра в БД"""
         try:
             conn = подключиться_к_бд()
             if not conn:
@@ -4852,7 +5530,6 @@ class ОкноПрофиляРежиссёра(Screen):
             cur.close()
             conn.close()
 
-            # Обновляем изображение
             self.изображение_фото.source = ссылка
             self.изображение_фото.reload()
 
@@ -4861,7 +5538,6 @@ class ОкноПрофиляРежиссёра(Screen):
             self.показать_сообщение(f'Ошибка: {str(e)}')
 
     def показать_сообщение(self, текст):
-        """Показывает всплывающее сообщение"""
         popup = Popup(
             title='Сообщение',
             content=Label(text=текст),
@@ -4889,7 +5565,6 @@ class ОкноПрофиляРежиссёра(Screen):
     def показать_профиль(self, instance):
         self.manager.current = 'профиль'
 
-
 class MyApp(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -4900,7 +5575,7 @@ class MyApp(App):
         self.выбранный_актер_id = None
         self.выбранный_режиссер_id = None
         self.целевой_пользователь = None
-        self.текущие_выбранные_элементы = []
+        self.текущие_выбранные_элементы = {}
 
     def build(self):
         Window.size = (1500, 750)
@@ -4921,7 +5596,6 @@ class MyApp(App):
         sm.add_widget(ОкноПрофиляРежиссёра(name='профиль_режиссера'))
         self.title = 'Система для подбора фильмов'
         return sm
-
 
 if __name__ == '__main__':
     try:
